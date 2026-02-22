@@ -123,7 +123,7 @@ if all_logs:
             worksheet = writer.sheets['Presence']
             # Simple column formatting
             worksheet.set_column('A:Z', 15)
-        st.download_button("📥 Export Presence Report", buf.getvalue(), "Presence_Audit.xlsx")
+        st.download_button("📥 Export Presence Report", buf.getvalue(), "Alturath_Audit_Report.xlsx")
 
     with tab3:
         st.header("Absence & Leave Report")
