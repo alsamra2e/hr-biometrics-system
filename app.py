@@ -1,149 +1,150 @@
 import streamlit as st
 import pandas as pd
-import re
-import sqlite3
+import plotly.express as px
 from io import BytesIO
 from datetime import datetime
-import plotly.express as px
 
-# 1. PAGE CONFIGURATION (Using Default Theme)
-st.set_page_config(page_title="Alturath University | HR Audit", layout="wide")
+# 1. PAGE SETUP
+st.set_page_config(page_title="Alturath University | HR Audit Pro", layout="wide")
 
-# 2. DATABASE FOR DAY-OFFS (Keeps records between sessions)
-def init_db():
-    conn = sqlite3.connect('hr_portal.db', check_same_thread=False)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS leaves 
-                 (emp_id TEXT, name TEXT, date TEXT, reason TEXT)''')
-    conn.commit()
-    return conn
+# 2. STYLING & UI
+def apply_color_logic(val):
+    if "Late" in str(val):
+        return 'background-color: #ffeef0; color: #d73a49; font-weight: bold;'
+    elif "On Time" in str(val):
+        return 'background-color: #e6ffed; color: #22863a; font-weight: bold;'
+    return ''
 
-conn = init_db()
+# 3. DATA PROCESSING ENGINES
+def process_gate_logs(file, source_name):
+    """Processes the new Gate format with Date/Time in one column."""
+    try:
+        # engine='xlrd' handles .xls, engine='openpyxl' handles .xlsx
+        engine = 'xlrd' if file.name.endswith('.xls') else 'openpyxl'
+        df = pd.read_excel(file, engine=engine)
+        df.columns = [str(c).strip() for c in df.columns]
+        
+        # Convert 'الوقت' to datetime
+        df['dt'] = pd.to_datetime(df['الوقت'], errors='coerce')
+        df['Date'] = df['dt'].dt.date
+        df['Time'] = df['dt'].dt.strftime('%H:%M')
+        
+        # Rename columns to standard English
+        df = df.rename(columns={
+            'رقم هوية': 'ID',
+            'الإسم': 'Name',
+            'Event': 'Action'
+        })
+        
+        # Identify Check-In (min time) and Check-Out (max time) per person per day
+        # Usually, (1)دخول is the first and (2)خروج is the last
+        summary = df.groupby(['ID', 'Name', 'Date']).agg(
+            Check_In=('Time', 'min'),
+            Check_Out=('Time', 'max')
+        ).reset_index()
+        
+        summary['Source'] = source_name
+        return summary
+    except Exception as e:
+        st.error(f"Error processing Gate file: {e}")
+        return pd.DataFrame()
 
-# 3. ROBUST PARSING ENGINE (Handles your specific Excel layout)
-def clean_time(val):
-    if pd.isna(val) or str(val).strip() in ["", "-"]: return None, None
-    val_clean = str(val).replace('\n', ' ').strip()
-    parts = val_clean.split()
-    return (parts[0], parts[-1]) if len(parts) >= 2 else (parts[0], None)
+def process_app_logs(file):
+    """Processes the new Mawjood App format."""
+    try:
+        engine = 'xlrd' if file.name.endswith('.xls') else 'openpyxl'
+        # Skip the institution headers (first 3 rows)
+        df = pd.read_excel(file, header=3, engine=engine)
+        df.columns = [str(c).strip() for c in df.columns]
+        
+        # Filter only Present (حاضر)
+        df = df[df['الحالة'] == 'حاضر']
+        
+        res = pd.DataFrame({
+            'ID': 'App',
+            'Name': df['الاسم'],
+            'Date': datetime.now().date(), # Usually current day for this report
+            'Check_In': df['دخول'],
+            'Check_Out': df['خروج'],
+            'Source': 'Mawjood App'
+        })
+        return res
+    except Exception as e:
+        st.error(f"Error processing App file: {e}")
+        return pd.DataFrame()
 
-def process_device(file, source_name):
-    df_raw = pd.read_excel(file, header=None)
-    meta = str(df_raw.iloc[3, 0])
-    eid = re.search(r'رقم هوية:(\d+)', meta).group(1) if re.search(r'رقم هوية:(\d+)', meta) else "0"
-    ename = re.search(r'الإسم:(.*?)القسم:', meta).group(1).strip() if re.search(r'الإسم:(.*?)القسم:', meta) else "Unknown"
-    
-    data = []
-    # Row 6 (Days 1-16) and Row 8 (Days 17-31)
-    for r, c_lim in [(6, 16), (8, 15)]:
-        for c_idx in range(c_lim):
-            day, log = df_raw.iloc[r-1, c_idx], df_raw.iloc[r, c_idx]
-            cin, cout = clean_time(log)
-            if cin:
-                data.append({"ID": eid, "Name": ename, "Day": str(day), "In": cin, "Out": cout, "Source": source_name})
-    return pd.DataFrame(data)
-
-def process_app(file):
-    df = pd.read_excel(file, header=3)
-    df.columns = [str(c).strip() for c in df.columns]
-    df = df[df['الحالة'] != 'غياب']
-    return pd.DataFrame({"Name": df['الاسم'], "In": df['دخول'], "Out": df['خروج'], "Source": "Mawjood App", "Day": "Current", "ID": "App"})
-
-# 4. SIDEBAR & NAVIGATION
-st.sidebar.title("🏛️ HR Audit Portal")
-page = st.sidebar.radio("Navigation", ["📊 Summary Dashboard", "🕵️ Detailed Employee Audit", "📅 Day-Off Registry"])
+# 4. NAVIGATION
+st.sidebar.title("🏛️ Alturath HR Audit")
+page = st.sidebar.radio("Go to:", ["📊 Summary", "🕵️ Detailed Audit"])
 
 with st.sidebar:
     st.divider()
-    st.subheader("Upload Excel Files")
-    g1 = st.file_uploader("Gate 1 Log", type=['xlsx'])
-    g2 = st.file_uploader("Gate 2 Log", type=['xlsx'])
-    app = st.file_uploader("Mawjood App Log", type=['xlsx'])
+    st.subheader("Upload Logs (.xls or .xlsx)")
+    gate_files = st.file_uploader("Upload Gate Logs", type=['xlsx', 'xls'], accept_multiple_files=True)
+    app_file = st.file_uploader("Upload Mawjood App Log", type=['xlsx', 'xls'])
 
-# 5. DATA CONSOLIDATION
+# 5. DATA MERGING
 all_data = []
-if g1: all_data.append(process_device(g1, "Gate 1"))
-if g2: all_data.append(process_device(g2, "Gate 2"))
-if app: all_data.append(process_app(app))
+for f in gate_files:
+    all_data.append(process_gate_logs(f, f.name))
+if app_file:
+    all_data.append(process_app_logs(app_file))
 
 if all_data:
-    df = pd.concat(all_data, ignore_index=True)
+    master_df = pd.concat(all_data, ignore_index=True)
     
-    # APPLY TIMING ALERTS (Logic for Coloring)
-    def check_compliance(time_val):
-        if not time_val: return "Unknown"
-        return "🔴 LATE" if str(time_val) > "08:30" else "✅ ON TIME"
+    # Apply Compliance Rule (> 08:30)
+    def determine_status(time_str):
+        if pd.isna(time_str) or time_str == '-': return "N/A"
+        # Convert HH:MM AM/PM if from app, or HH:MM if from device
+        try:
+            t = pd.to_datetime(time_str).time()
+            cutoff = datetime.strptime("08:30", "%H:%M").time()
+            return "🔴 Late" if t > cutoff else "✅ On Time"
+        except:
+            return "On Time"
 
-    df['Compliance'] = df['In'].apply(check_compliance)
+    master_df['Status'] = master_df['Check_In'].apply(determine_status)
 
-    # --- PAGE 1: EXECUTIVE SUMMARY ---
-    if page == "📊 Summary Dashboard":
-        st.header("Institutional Attendance Performance")
+    if page == "📊 Summary":
+        st.header("Institutional Overview")
+        col1, col2, col3 = st.columns(3)
+        total = len(master_df)
+        late = len(master_df[master_df['Status'] == "🔴 Late"])
         
-        c1, c2, c3 = st.columns(3)
-        late_count = len(df[df['Compliance'] == "🔴 LATE"])
-        c1.metric("General Compliance", f"{((len(df)-late_count)/len(df))*100:.1f}%")
-        c2.metric("Mawjood App Dependency", f"{(len(df[df['Source']=='Mawjood App'])/len(df))*100:.1f}%")
-        c3.metric("Employees Processed", df['Name'].nunique())
+        col1.metric("Total Records", total)
+        col2.metric("Late Arrivals", late, delta=f"{late/total*100:.1f}%", delta_color="inverse")
+        col3.metric("Staff Count", master_df['Name'].nunique())
 
         st.divider()
-        col_a, col_b = st.columns(2)
-        with col_a:
-            fig1 = px.pie(df, names='Source', title="Verification Source Split", hole=0.5)
-            st.plotly_chart(fig1, use_container_width=True)
-        with col_b:
-            # Color map for the charts
-            fig2 = px.histogram(df, x="Source", color="Compliance", barmode="group", 
-                                title="Punctuality by Device",
-                                color_discrete_map={"🔴 LATE": "#d73a49", "✅ ON TIME": "#22863a"})
-            st.plotly_chart(fig2, use_container_width=True)
+        fig = px.histogram(master_df, x="Source", color="Status", barmode="group",
+                           color_discrete_map={"🔴 Late": "#d73a49", "✅ On Time": "#22863a"},
+                           title="Punctuality per Device Source")
+        st.plotly_chart(fig, use_container_width=True)
 
-    # --- PAGE 2: DETAILED AUDIT ---
-    elif page == "🕵️ Detailed Employee Audit":
-        st.header("Detailed Performance Audit")
+    elif page == "🕵️ Detailed Audit":
+        st.header("Employee Detail Report")
         
-        # SEARCH AND FILTER
-        search = st.selectbox("Search for Employee Name", ["View All Records"] + list(df['Name'].unique()))
-        final_df = df if search == "View All Records" else df[df['Name'] == search]
-        
-        # THE COLOR-CODING MAGIC (Conditional Styling)
-        def color_compliance_rows(val):
-            # Applying colors directly to the 'Compliance' column cell
-            if val == "✅ ON TIME":
-                return 'background-color: #e6ffed; color: #22863a; font-weight: bold;'
-            elif val == "🔴 LATE":
-                return 'background-color: #ffeef0; color: #d73a49; font-weight: bold;'
-            return ''
+        # Search Filter
+        search = st.text_input("🔍 Search by Name or ID")
+        if search:
+            display_df = master_df[master_df['Name'].str.contains(search, na=False, case=False)]
+        else:
+            display_df = master_df
 
-        # Display Styled Dataframe
+        # Display Styled Table
         st.dataframe(
-            final_df.style.applymap(color_compliance_rows, subset=['Compliance']), 
-            use_container_width=True, 
+            display_df.style.applymap(apply_color_logic, subset=['Status']),
+            use_container_width=True,
             hide_index=True
         )
 
-        # EXPORT FOR PRINTING
+        # Export Report
         st.divider()
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            final_df.to_excel(writer, index=False, sheet_name='HR_Report')
-        st.download_button("📥 Export Report to Excel (Print-Ready)", output.getvalue(), "Alturath_University_Audit.xlsx")
-
-    # --- PAGE 3: LEAVE REGISTRY ---
-    elif page == "📅 Day-Off Registry":
-        st.header("Day-Off & Leave Management")
-        with st.form("leave_form"):
-            col1, col2 = st.columns(2)
-            l_name = col1.text_input("Full Name")
-            l_reason = col2.selectbox("Type of Leave", ["Official Off-Day", "Sick Leave", "Annual Vacation", "Mission"])
-            l_date = st.date_input("Date of Absence")
-            if st.form_submit_button("Save to Database"):
-                conn.execute("INSERT INTO leaves VALUES (?,?,?,?)", ("-", l_name, str(l_date), l_reason))
-                conn.commit()
-                st.success(f"Registered {l_reason} for {l_name}")
-
-        st.subheader("Official Absence Records")
-        st.dataframe(pd.read_sql("SELECT * FROM leaves", conn), use_container_width=True, hide_index=True)
+            display_df.to_excel(writer, index=False, sheet_name='Audit_Report')
+        st.download_button("📥 Download Full Audit (Excel)", output.getvalue(), "Alturath_Detailed_Audit.xlsx")
 
 else:
-    st.info("Awaiting Data Upload. Please select Gate 1, Gate 2, or Mawjood App Excel files in the sidebar.")
+    st.info("👋 Welcome! Please upload your .xls or .xlsx log files in the sidebar to generate the report.")
