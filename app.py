@@ -96,7 +96,7 @@ if all_logs or f_weekly:
             # If they punched in, they are PRESENT (regardless of day-off status)
             row["Check-In"] = punch['Time'].iloc[0]
             row["Source"] = punch['Source'].iloc[0]
-            row["Status"] = "🔴 Late" if row["Check-In"] > "08:30" else "✅ On Time"
+            row["Status"] = "🔴 Late" if row["Check-In"] > "08:35" else "✅ On Time"
         elif is_off_today:
             # If they didn't punch but it's their scheduled day off
             row["Status"] = "🟡 Weekly Off"
