@@ -5,18 +5,19 @@ from io import BytesIO
 from datetime import datetime, date
 
 # 1. PAGE SETUP
-st.set_page_config(page_title="Alturath University | HR Audit Pro", layout="wide")
+st.set_page_config(page_title="Alturath University | HR Audit & Analytics", layout="wide")
 
-# 2. SIDEBAR LOGO & FILTERS
+# 2. SIDEBAR & LOGO
 st.sidebar.image("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRfTMmtmrsxGUBnlEb0xB0ClMbFZmj_L5Ap5Q&s")
-st.sidebar.title("HR Audit Control")
+st.sidebar.title("HR Control Center")
 
 with st.sidebar:
     st.divider()
+    st.subheader("📅 Audit Parameters")
     use_today = st.toggle("Show Today Only", value=False)
     target_date = date.today() if use_today else st.date_input("Audit Date", value=date.today())
     
-    # Map Python weekday to Arabic for your Excel matching
+    # Arabic Weekday Mapping
     weekdays_ar = {
         "Monday": "الاثنين", "Tuesday": "الثلاثاء", "Wednesday": "الاربعاء", 
         "Thursday": "الخميس", "Friday": "الجمعة", "Saturday": "السبت", "Sunday": "الاحد"
@@ -24,23 +25,23 @@ with st.sidebar:
     current_weekday_ar = weekdays_ar[target_date.strftime("%A")]
     st.info(f"Audit Day: **{current_weekday_ar}**")
 
-    st.subheader("📥 Upload Data")
+    st.subheader("📥 Data Sources")
     f_zaqura = st.file_uploader("Zaqura Gate", type=['xlsx', 'xls'])
     f_mhmd = st.file_uploader("Mhmd Bn Ali Gate", type=['xlsx', 'xls'])
     f_app = st.file_uploader("Mawjood App", type=['xlsx', 'xls'])
     f_weekly = st.file_uploader("📅 Weekly Day-Off List", type=['xlsx', 'xls'])
 
-# 3. PROCESSING ENGINES
+# 3. DATA PROCESSING
 def process_gate(file, g_name):
     try:
         engine = 'xlrd' if file.name.endswith('.xls') else 'openpyxl'
         df = pd.read_excel(file, engine=engine)
         df.columns = [str(c).strip() for c in df.columns]
         df['dt'] = pd.to_datetime(df['الوقت'], errors='coerce')
-        df = df[df['dt'].dt.date == target_date] # Filter for selected date
+        df = df[df['dt'].dt.date == target_date]
         df['Time'] = df['dt'].dt.strftime('%H:%M')
         df = df.rename(columns={'الاسم': 'Name', 'الإسم': 'Name', 'رقم هوية': 'ID'})
-        return df[['ID', 'Name', 'Time', 'Date']].assign(Source=g_name)
+        return df[['Name', 'Time']].assign(Source=g_name)
     except: return pd.DataFrame()
 
 def process_app(file):
@@ -49,7 +50,7 @@ def process_app(file):
         df = pd.read_excel(file, header=3, engine=engine)
         df.columns = [str(c).strip() for c in df.columns]
         df = df[df['الحالة'] == 'حاضر']
-        return pd.DataFrame({'Name': df['الاسم'], 'Time': df['دخول'], 'Source': 'App', 'Date': target_date})
+        return pd.DataFrame({'Name': df['الاسم'], 'Time': df['دخول'], 'Source': 'App'})
     except: return pd.DataFrame()
 
 def process_weekly_off(file):
@@ -57,90 +58,93 @@ def process_weekly_off(file):
         engine = 'xlrd' if file.name.endswith('.xls') else 'openpyxl'
         df = pd.read_excel(file, engine=engine)
         df.columns = [str(c).strip() for c in df.columns]
-        # Columns: الاسم الثلاثي, الاجازة الاسبوعية
         return df.rename(columns={'الاسم الثلاثي': 'Name', 'الاجازة الاسبوعية': 'OffDay'})
     except: return pd.DataFrame()
 
-# 4. CONSOLIDATION LOGIC
+# 4. CONSOLIDATION & ANALYSIS
 all_logs = []
 if f_zaqura: all_logs.append(process_gate(f_zaqura, "Zaqura"))
 if f_mhmd: all_logs.append(process_gate(f_mhmd, "Mhmd Bn Ali"))
 if f_app: all_logs.append(process_app(f_app))
 
 if all_logs or f_weekly:
-    # A. Get Logs and De-Duplicate (Keep First Punch)
-    if all_logs:
-        df_present = pd.concat(all_logs, ignore_index=True)
-        # Keep only the earliest punch for each person
-        df_present = df_present.sort_values('Time').drop_duplicates(subset=['Name'], keep='first')
-    else:
-        df_present = pd.DataFrame(columns=['Name', 'Time', 'Source'])
-
-    # B. Get Staff List & Weekly Offs
+    df_present = pd.concat(all_logs, ignore_index=True) if all_logs else pd.DataFrame(columns=['Name', 'Time', 'Source'])
+    df_present = df_present.sort_values('Time').drop_duplicates(subset=['Name'], keep='first')
+    
     df_off = process_weekly_off(f_weekly) if f_weekly else pd.DataFrame(columns=['Name', 'OffDay'])
+    master_names = list(set(df_present['Name'].tolist() + df_off['Name'].tolist()))
     
-    # C. Master Reconciliation
-    # Combine list of everyone who punched and everyone on the staff list
-    master_list = list(set(df_present['Name'].tolist() + df_off['Name'].tolist()))
-    
-    final_report = []
-    for name in master_list:
-        row = {"Name": name, "Check-In": "-", "Source": "-", "Status": ""}
-        
-        # Check if they punched in
+    final_data = []
+    for name in master_names:
         punch = df_present[df_present['Name'] == name]
-        is_present = not punch.empty
+        off_info = df_off[df_off['Name'] == name]
+        is_off = (off_info['OffDay'].iloc[0] == current_weekday_ar) if not off_info.empty else False
         
-        # Check if today is their day off
-        staff_info = df_off[df_off['Name'] == name]
-        is_day_off_today = False
-        if not staff_info.empty:
-            is_day_off_today = (staff_info['OffDay'].iloc[0] == current_weekday_ar)
-
-        if is_present:
+        row = {"Name": name, "Check-In": "-", "Source": "-", "Status": ""}
+        if not punch.empty:
             row["Check-In"] = punch['Time'].iloc[0]
             row["Source"] = punch['Source'].iloc[0]
-            # Compliance Check
-            try:
-                t = row["Check-In"].replace(" AM", "").replace(" PM", "")
-                row["Status"] = "🔴 Late" if t > "08:30" else "✅ On Time"
-            except: row["Status"] = "✅ Present"
-        elif is_day_off_today:
-            row["Status"] = "🟡 Official Weekly Off"
+            t = row["Check-In"].replace(" AM", "").replace(" PM", "")
+            row["Status"] = "🔴 Late" if t > "08:30" else "✅ On Time"
+        elif is_off:
+            row["Status"] = "🟡 Weekly Off"
         else:
-            row["Status"] = "❌ Unexplained Absence"
+            row["Status"] = "❌ Absence"
+        final_data.append(row)
+
+    df_final = pd.DataFrame(final_data)
+
+    # 5. TABS
+    tab1, tab2 = st.tabs(["📊 Performance Analysis", "🕵️ Detailed Presence Log"])
+
+    with tab1:
+        st.header(f"Migration & Lateness Progress ({current_weekday_ar})")
         
-        final_report.append(row)
+        # Top Metrics
+        m1, m2, m3 = st.columns(3)
+        total = len(df_final)
+        late = len(df_final[df_final['Status'] == "🔴 Late"])
+        absent = len(df_final[df_final['Status'] == "❌ Absence"])
+        
+        m1.metric("Staff Coverage", f"{((total-absent)/total)*100:.1f}%" if total > 0 else "0%")
+        m2.metric("Lateness Rate", f"{(late/total)*100:.1f}%" if total > 0 else "0%", delta_color="inverse")
+        m3.metric("System Adoption", df_final[df_final['Source'] == 'App']['Name'].count())
 
-    df_final = pd.DataFrame(final_report).sort_values("Status")
+        st.divider()
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            # Chart: Comparison of Lateness by Source
+            fig_perf = px.histogram(df_final[df_final['Source'] != '-'], x="Source", color="Status", 
+                                   barmode="group", title="Lateness: App vs Physical Gates",
+                                   color_discrete_map={"🔴 Late": "#d73a49", "✅ On Time": "#22863a"})
+            st.plotly_chart(fig_perf, use_container_width=True)
 
-    # 5. UI TABS
-    st.header(f"Detailed Presence Log - {target_date} ({current_weekday_ar})")
-    
-    # Search for 500+ employees
-    search = st.text_input("🔍 Search Employee Name", placeholder="Type name to audit...")
-    if search:
-        df_final = df_final[df_final['Name'].str.contains(search, na=False)]
+        with c2:
+            # Chart: Attendance Distribution
+            fig_dist = px.pie(df_final, names='Status', title="Overall Attendance Status",
+                             color_discrete_map={"🔴 Late": "#d73a49", "✅ On Time": "#22863a", "❌ Absence": "#7a7a7a", "🟡 Weekly Off": "#ffd700"})
+            st.plotly_chart(fig_dist, use_container_width=True)
 
-    def style_final(val):
-        if "Late" in str(val) or "Absence" in str(val): return 'background-color: #ffeef0; color: #d73a49; font-weight: bold;'
-        if "On Time" in str(val): return 'background-color: #e6ffed; color: #22863a; font-weight: bold;'
-        if "Weekly Off" in str(val): return 'background-color: #fffbdd; color: #735c0f;'
-        return ''
+    with tab2:
+        st.header("Consolidated Audit Report")
+        search = st.text_input("🔍 Search 500+ Employees...")
+        if search:
+            df_final = df_final[df_final['Name'].str.contains(search, na=False)]
 
-    st.dataframe(df_final.style.applymap(style_final, subset=['Status']), use_container_width=True, hide_index=True)
+        def style_rows(val):
+            if "Late" in str(val) or "Absence" in str(val): return 'background-color: #ffeef0; color: #d73a49; font-weight: bold;'
+            if "On Time" in str(val): return 'background-color: #e6ffed; color: #22863a; font-weight: bold;'
+            if "Off" in str(val): return 'background-color: #fffbdd; color: #735c0f;'
+            return ''
 
-    # 6. EXCEL EXPORT
-    st.divider()
-    buf = BytesIO()
-    with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
-        df_final.to_excel(writer, index=False, sheet_name='Audit')
-        workbook  = writer.book
-        worksheet = writer.sheets['Audit']
-        # Add a bit of width
-        worksheet.set_column('A:D', 25)
-    
-    st.download_button("📥 Download Official Colored Report", buf.getvalue(), f"HR_Audit_{target_date}.xlsx")
+        st.dataframe(df_final.style.applymap(style_rows, subset=['Status']), use_container_width=True, hide_index=True)
+
+        # Final Colored Export
+        buf = BytesIO()
+        with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
+            df_final.to_excel(writer, index=False, sheet_name='Audit')
+        st.download_button("📥 Export Analysis Report (Excel)", buf.getvalue(), f"HR_Report_{target_date}.xlsx")
 
 else:
-    st.info("Please upload Gate/App logs and the Weekly Day-Off Excel to generate the integrated report.")
+    st.info("Please upload logs to view the Analysis and Charts.")
