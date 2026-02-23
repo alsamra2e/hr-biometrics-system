@@ -38,7 +38,6 @@ def process_gate(file, g_name):
         df.columns = [str(c).strip() for c in df.columns]
         df['dt'] = pd.to_datetime(df['الوقت'], errors='coerce')
         df = df[df['dt'].dt.date == target_date]
-        # Standardize to 24h string for safe sorting
         df['Time'] = df['dt'].dt.strftime('%H:%M')
         df = df.rename(columns={'الاسم': 'Name', 'الإسم': 'Name', 'رقم هوية': 'ID'})
         return df[['Name', 'Time']].assign(Source=g_name)
@@ -49,8 +48,8 @@ def process_app(file):
         engine = 'xlrd' if file.name.endswith('.xls') else 'openpyxl'
         df = pd.read_excel(file, header=3, engine=engine)
         df.columns = [str(c).strip() for c in df.columns]
-        df = df[df['الحالة'] == 'حاضر']
-        # Convert App AM/PM format to 24h string for safe sorting
+        # Important: Match the exact status name for presence
+        df = df[df['الحالة'].isin(['حاضر', 'Present'])]
         df['Time'] = pd.to_datetime(df['دخول'], errors='coerce').dt.strftime('%H:%M')
         return pd.DataFrame({'Name': df['الاسم'], 'Time': df['Time'], 'Source': 'App'})
     except: return pd.DataFrame()
@@ -65,38 +64,46 @@ def process_weekly_off(file):
 
 # 4. CONSOLIDATION & ANALYSIS
 all_logs = []
-if f_zaqura: all_logs.append(process_gate(f_zaqura, "Zaqura"))
-if f_mhmd: all_logs.append(process_gate(f_mhmd, "Mhmd Bn Ali"))
+if f_zaqura: all_logs.append(process_gate(f_zaqura, "Zaqura Gate"))
+if f_mhmd: all_logs.append(process_gate(f_mhmd, "Mhmd Bn Ali Gate"))
 if f_app: all_logs.append(process_app(f_app))
 
 if all_logs or f_weekly:
-    # Standardize and Clean Logs
+    # Standardize Logs
     if all_logs:
         df_present = pd.concat(all_logs, ignore_index=True)
         df_present = df_present.dropna(subset=['Time', 'Name'])
-        # Sort values now works because everything is a clean HH:MM string
+        # Keep earliest punch of the day per name
         df_present = df_present.sort_values('Time').drop_duplicates(subset=['Name'], keep='first')
     else:
         df_present = pd.DataFrame(columns=['Name', 'Time', 'Source'])
     
     df_off = process_weekly_off(f_weekly) if f_weekly else pd.DataFrame(columns=['Name', 'OffDay'])
+    
+    # Unified list of all unique names across logs and staff list
     master_names = list(set(df_present['Name'].tolist() + df_off['Name'].tolist()))
     
     final_data = []
     for name in master_names:
         punch = df_present[df_present['Name'] == name]
         off_info = df_off[df_off['Name'] == name]
-        is_off = (off_info['OffDay'].iloc[0] == current_weekday_ar) if not off_info.empty else False
+        is_off_today = (off_info['OffDay'].iloc[0] == current_weekday_ar) if not off_info.empty else False
         
         row = {"Name": name, "Check-In": "-", "Source": "-", "Status": ""}
+        
+        # --- LOGIC PRIORITY ---
         if not punch.empty:
+            # If they punched in, they are PRESENT (regardless of day-off status)
             row["Check-In"] = punch['Time'].iloc[0]
             row["Source"] = punch['Source'].iloc[0]
             row["Status"] = "🔴 Late" if row["Check-In"] > "08:30" else "✅ On Time"
-        elif is_off:
+        elif is_off_today:
+            # If they didn't punch but it's their scheduled day off
             row["Status"] = "🟡 Weekly Off"
         else:
+            # If they didn't punch and it's a working day
             row["Status"] = "❌ Absence"
+            
         final_data.append(row)
 
     df_final = pd.DataFrame(final_data)
@@ -113,7 +120,7 @@ if all_logs or f_weekly:
             absent = len(df_final[df_final['Status'] == "❌ Absence"])
             m1.metric("Staff Coverage", f"{((total-absent)/total)*100:.1f}%" if total > 0 else "0%")
             m2.metric("Lateness Rate", f"{(late/total)*100:.1f}%" if total > 0 else "0%", delta_color="inverse")
-            m3.metric("System Adoption", df_final[df_final['Source'] == 'App']['Name'].count())
+            m3.metric("System Adoption (App Users)", df_final[df_final['Source'] == 'App']['Name'].count())
             
             st.divider()
             c1, c2 = st.columns(2)
@@ -123,7 +130,7 @@ if all_logs or f_weekly:
                                        color_discrete_map={"🔴 Late": "#d73a49", "✅ On Time": "#22863a"})
                 st.plotly_chart(fig_perf, use_container_width=True)
             with c2:
-                fig_dist = px.pie(df_final, names='Status', title="Overall Attendance Status",
+                fig_dist = px.pie(df_final, names='Status', title="Overall Status Distribution",
                                  color_discrete_map={"🔴 Late": "#d73a49", "✅ On Time": "#22863a", "❌ Absence": "#7a7a7a", "🟡 Weekly Off": "#ffd700"})
                 st.plotly_chart(fig_dist, use_container_width=True)
 
