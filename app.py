@@ -291,5 +291,4 @@ if all_logs or f_weekly:
 else:
     st.info("Please upload logs to view the Analysis and Charts.")
 
-else:
     run_exceptions_module()
