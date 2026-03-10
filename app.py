@@ -9,55 +9,6 @@ import requests
 from io import BytesIO
 
 # --- HELPER FUNCTIONS ---
-def set_rtl(paragraph):
-    p = paragraph._element
-    pPr = p.get_or_add_pPr()
-    # Create the bidi element directly using the correct namespace
-    bidi = qn('w:bidi')
-    # Check if it already exists to avoid duplicates
-    existing_bidi = pPr.find(bidi)
-    if existing_bidi is None:
-        pPr.append(p.make_element(bidi))
-
-def extract_date_from_filename(filename):
-    # Regex to find YYYY-MM-DD in the filename
-    match = re.search(r'\d{4}-\d{2}-\d{2}', filename)
-    return match.group(0) if match else "Unknown Date"
-
-# --- THE NEW EXCEPTIONS MODULE ---
-def run_exceptions_module():
-    st.subheader("📋 Exceptions & Attendance Audit")
-    uploaded_files = st.file_uploader("Upload Daily Excels (Multiple)", accept_multiple_files=True, type=['xlsx', 'xls'])
-    
-    if uploaded_files:
-        all_data = []
-        for f in uploaded_files:
-            file_date = extract_date_from_filename(f.name)
-            df = pd.read_excel(f)
-            df['Report_Date'] = file_date # Add date from filename to every row
-            all_data.append(df)
-        
-        combined_df = pd.concat(all_data, ignore_index=True)
-        
-        # Filter: Keep only Late and Absence (ignoring emojis)
-        mask = combined_df['Status'].str.contains('Late|Absence', na=False)
-        exceptions = combined_df[mask].copy()
-        
-        if not exceptions.empty:
-            # Grouping by Name and Status to collect dates
-            summary = exceptions.groupby(['Name', 'Status'])['Report_Date'].agg(list).reset_index()
-            summary['Count'] = summary['Report_Date'].apply(len)
-            summary['Dates_Str'] = summary['Report_Date'].apply(lambda x: ", ".join(x))
-
-            st.write(f"Found {len(summary)} records with lates or absences.")
-            
-            if st.button("Generate Official Alturath Report"):
-                with st.spinner("Creating Word Document..."):
-                    report_bytes = create_word_doc(summary)
-                    st.download_button("📥 Download Official Report", report_bytes, "Alturath_Exceptions_Report.docx")
-        else:
-            st.success("Perfect! No Lates or Absences found.")
-
 def create_word_doc(df):
     doc = Document()
     
@@ -79,7 +30,8 @@ def create_word_doc(df):
         img_url = "https://uoturath.edu.iq/wp-content/uploads/2025/03/shield-1.png"
         img_data = BytesIO(requests.get(img_url).content)
         m.add_run().add_picture(img_data, width=Inches(0.8))
-    except: pass
+    except: 
+        pass
     
     # Left: English
     l = htable.rows[0].cells[2].paragraphs[0]
@@ -106,27 +58,20 @@ def create_word_doc(df):
         hdr[i].text = txt
         set_rtl(hdr[i].paragraphs[0])
 
-for _, row in df.iterrows():
-    cells = table.add_row().cells
-    cells[0].text = str(row['Name'])
-    cells[1].text = "تأخير" if "Late" in row['Status'] else "غياب"
-    cells[2].text = str(row['Count'])
-    
-    # Dates column
-    d_para = cells[3].paragraphs[0]
-    d_run = d_para.add_run(row['Dates_Str'])
-    d_run.font.size = Pt(8)
-    
-    # Apply RTL to every cell paragraph
-    for cell in cells:
-        for paragraph in cell.paragraphs:
-            set_rtl(paragraph)
+    for _, row in df.iterrows():
+        cells = table.add_row().cells
+        cells[0].text = str(row['Name'])
+        cells[1].text = "تأخير" if "Late" in row['Status'] else "غياب"
+        cells[2].text = str(row['Count'])
         
-        # Small font for dates to keep table clean
+        # Small font for dates
         d_para = cells[3].paragraphs[0]
         d_run = d_para.add_run(row['Dates_Str'])
         d_run.font.size = Pt(8)
-        set_rtl(d_para)
+        
+        for cell in cells:
+            for paragraph in cell.paragraphs:
+                set_rtl(paragraph)
 
     # 5. SIGNATURE
     doc.add_paragraph("\n\n")
@@ -134,7 +79,7 @@ for _, row in df.iterrows():
     sig.alignment = WD_ALIGN_PARAGRAPH.LEFT
     set_rtl(sig)
 
-# --- THE RETURN BLOCK (MUST BE INDENTED 4 SPACES) ---
+    # --- FINAL RETURN ---
     buf = BytesIO()
     doc.save(buf)
     buf.seek(0)
