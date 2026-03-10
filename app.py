@@ -134,6 +134,7 @@ for _, row in df.iterrows():
     sig.alignment = WD_ALIGN_PARAGRAPH.LEFT
     set_rtl(sig)
 
+# --- THE RETURN BLOCK (MUST BE INDENTED 4 SPACES) ---
     buf = BytesIO()
     doc.save(buf)
     buf.seek(0)
