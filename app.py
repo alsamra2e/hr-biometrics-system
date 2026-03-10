@@ -11,7 +11,7 @@ from docx.oxml import OxmlElement
 from io import BytesIO
 from datetime import datetime, date
 
-# --- 1. CORE UTILITIES (DEFINED FIRST) ---
+# --- 1. CORE UTILITIES ---
 
 def set_rtl(paragraph):
     """Sets Right-to-Left direction for Arabic text in Word."""
@@ -39,18 +39,18 @@ def extract_date_from_filename(filename):
 def create_word_doc(df):
     doc = Document()
     
-    # Header Section
+    # Header Setup
     section = doc.sections[0]
     header = section.header
     htable = header.add_table(1, 3, width=Inches(6.5))
     
-    # Right: Arabic Header
+    # Right Column: Arabic
     r = htable.rows[0].cells[0].paragraphs[0]
     r.text = "جامعة التراث\nقسم الشؤون الإدارية والمالية\nشعبة الموارد البشرية"
     r.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     set_rtl(r)
     
-    # Middle: Logo
+    # Middle Column: Logo
     m = htable.rows[0].cells[1].paragraphs[0]
     m.alignment = WD_ALIGN_PARAGRAPH.CENTER
     try:
@@ -59,23 +59,23 @@ def create_word_doc(df):
         m.add_run().add_picture(img_data, width=Inches(0.8))
     except: pass
     
-    # Left: English Header
+    # Left Column: English
     l = htable.rows[0].cells[2].paragraphs[0]
     l.text = "University Of Alturath\nDept. Of Admin & Financial Affairs\nHR Department"
     l.alignment = WD_ALIGN_PARAGRAPH.LEFT
     
-    # Maroon Separator Line
+    # Maroon Divider
     p_line = doc.add_paragraph()
     run_line = p_line.add_run("______________________________________________________________________")
     run_line.font.color.rgb = RGBColor(0x8F, 0x0B, 0x0B) 
     p_line.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Arabic Body Text
+    # Arabic Body Intro
     body = doc.add_paragraph("\nنرفق لسيادتكم في ادناه الكشف الخاص بموقف الحضور والغياب لكادر العمل الخاص بجامعة التراث وحسب كشف البصمة المرفق طيا نسخة منه ... راجين التفضل بالاطلاع واعلامنا توجيهات سيادتكم حول ذلك ... مع التقدير..")
     body.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     set_rtl(body)
 
-    # 5-Column Table: ت | الاسم | الحالة | العدد | التواريخ
+    # Table Structure: ت | الاسم | الحالة | العدد | التواريخ
     table = doc.add_table(rows=1, cols=5)
     table.style = 'Table Grid'
     set_table_rtl(table) 
@@ -87,12 +87,14 @@ def create_word_doc(df):
         hdr[i].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         set_rtl(hdr[i].paragraphs[0])
 
-    # Populate Data
+    # Fill Data Rows
     for idx, row in df.iterrows():
         cells = table.add_row().cells
         cells[0].text = str(idx + 1)
         cells[1].text = str(row['Name'])
-        cells[2].text = "تأخير" if "Late" in row['Status'] else "غياب"
+        # Translate cleaned status to Arabic
+        status_ar = "تأخير" if "Late" in str(row['Status']) else "غياب"
+        cells[2].text = status_ar
         cells[3].text = str(row['Count'])
         
         d_para = cells[4].paragraphs[0]
@@ -103,7 +105,7 @@ def create_word_doc(df):
             cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
             set_rtl(cell.paragraphs[0])
 
-    # Signature
+    # Signature Section
     doc.add_paragraph("\n\n")
     sig = doc.add_paragraph("م.م محمد زهير طالب النقيب\nمدير قسم الشؤون الادارية والموارد البشرية")
     sig.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -114,7 +116,7 @@ def create_word_doc(df):
     buf.seek(0)
     return buf
 
-# --- 3. STREAMLIT APP LOGIC ---
+# --- 3. AUDIT MODULE LOGIC ---
 
 def run_exceptions_module():
     st.subheader("📋 Exceptions & Attendance Audit")
@@ -126,36 +128,45 @@ def run_exceptions_module():
             file_date = extract_date_from_filename(f.name)
             try:
                 engine = 'xlrd' if f.name.endswith('.xls') else 'openpyxl'
-                df = pd.read_excel(f, engine=engine)
+                # FIXED: header=1 tells pandas that the column names are in Row 2
+                df = pd.read_excel(f, engine=engine, header=1)
                 df.columns = [str(c).strip() for c in df.columns]
                 
+                # Verify required columns are present in Row 2
                 if 'Status' in df.columns and 'Name' in df.columns:
+                    # Search for the words 'Late' or 'Absence' regardless of icons
                     mask = df['Status'].str.contains('Late|Absence', case=False, na=False)
                     day_data = df[mask].copy()
                     day_data['Report_Date'] = file_date
                     all_data.append(day_data[['Name', 'Status', 'Report_Date']])
-            except: pass
+                else:
+                    st.warning(f"⚠️ Column 'Status' or 'Name' not found in Row 2 of {f.name}")
+            except Exception as e:
+                st.error(f"Error reading {f.name}: {e}")
         
         if all_data:
             combined = pd.concat(all_data, ignore_index=True)
+            # Group by person and status (Late/Absence)
             summary = combined.groupby(['Name', 'Status'])['Report_Date'].unique().reset_index()
             summary['Count'] = summary['Report_Date'].apply(len)
             summary['Dates_Str'] = summary['Report_Date'].apply(lambda x: ", ".join(sorted(x)))
 
+            st.write("### Preview of Violations")
             st.dataframe(summary[['Name', 'Status', 'Count', 'Dates_Str']], use_container_width=True)
             
             if st.button("Generate Official Alturath Word Report"):
-                report_file = create_word_doc(summary)
-                st.download_button("📥 Download Official Report", report_file, "Alturath_Exceptions_Report.docx")
+                with st.spinner("Creating Document..."):
+                    report_file = create_word_doc(summary)
+                    st.download_button("📥 Download Official Report", report_file, "Alturath_Exceptions_Report.docx")
 
-# --- 4. NAVIGATION ---
+# --- 4. APP NAVIGATION ---
 
 st.set_page_config(page_title="Alturath University | HR Audit Pro", layout="wide")
 mode = st.sidebar.radio("Navigation:", ["Daily Report (Old)", "Exceptions Audit (New)"])
 
 if mode == "Daily Report (Old)":
     st.title("Biometric Attendance Report")
-    st.info("Upload logs to generate the daily report.")
-    # You can paste your original day-processing code here
+    st.info("Upload your individual gate logs to generate a daily report.")
+    # Paste your existing processing code for the daily report here
 else:
     run_exceptions_module()
