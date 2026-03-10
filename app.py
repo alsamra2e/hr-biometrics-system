@@ -12,8 +12,11 @@ from io import BytesIO
 def set_rtl(paragraph):
     p = paragraph._element
     pPr = p.get_or_add_pPr()
+    # Create the bidi element directly using the correct namespace
     bidi = qn('w:bidi')
-    if not pPr.xpath(f'./{bidi}'):
+    # Check if it already exists to avoid duplicates
+    existing_bidi = pPr.find(bidi)
+    if existing_bidi is None:
         pPr.append(p.make_element(bidi))
 
 def extract_date_from_filename(filename):
@@ -103,11 +106,21 @@ def create_word_doc(df):
         hdr[i].text = txt
         set_rtl(hdr[i].paragraphs[0])
 
-    for _, row in df.iterrows():
-        cells = table.add_row().cells
-        cells[0].text = str(row['Name'])
-        cells[1].text = "تأخير" if "Late" in row['Status'] else "غياب"
-        cells[2].text = str(row['Count'])
+for _, row in df.iterrows():
+    cells = table.add_row().cells
+    cells[0].text = str(row['Name'])
+    cells[1].text = "تأخير" if "Late" in row['Status'] else "غياب"
+    cells[2].text = str(row['Count'])
+    
+    # Dates column
+    d_para = cells[3].paragraphs[0]
+    d_run = d_para.add_run(row['Dates_Str'])
+    d_run.font.size = Pt(8)
+    
+    # Apply RTL to every cell paragraph
+    for cell in cells:
+        for paragraph in cell.paragraphs:
+            set_rtl(paragraph)
         
         # Small font for dates to keep table clean
         d_para = cells[3].paragraphs[0]
