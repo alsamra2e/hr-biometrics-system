@@ -13,25 +13,17 @@ from datetime import datetime, date
 
 # --- 1. CORE HELPER FUNCTIONS ---
 
-def set_rtl(paragraph):
-    """Sets Right-to-Left direction for Arabic text in Word."""
-    p = paragraph._element
-    pPr = p.get_or_add_pPr()
-    bidi = pPr.find(qn('w:bidi'))
-    if bidi is None:
-        bidi = OxmlElement('w:bidi')
-        pPr.append(bidi)
-
-def extract_date_from_filename(filename):
-    """Extracts YYYY-MM-DD from filenames like HR_Report_2026-03-10."""
-    match = re.search(r'\d{4}-\d{2}-\d{2}', filename)
-    return match.group(0) if match else str(date.today())
+def set_table_rtl(table):
+    """Sets the entire table to Right-to-Left direction."""
+    tbl_pr = table._element.xpath('w:tblPr')
+    if tbl_pr:
+        bidi = OxmlElement('w:bidiVisual')
+        tbl_pr[0].append(bidi)
 
 def create_word_doc(df):
-    """Generates the official Arabic Word report with Header/Footer/Table."""
     doc = Document()
     
-    # 1. HEADER (3 Columns)
+    # --- 1. HEADER LOGIC ---
     section = doc.sections[0]
     header = section.header
     htable = header.add_table(1, 3, width=Inches(6.5))
@@ -49,15 +41,14 @@ def create_word_doc(df):
         img_url = "https://uoturath.edu.iq/wp-content/uploads/2025/03/shield-1.png"
         img_data = BytesIO(requests.get(img_url).content)
         m.add_run().add_picture(img_data, width=Inches(0.8))
-    except: 
-        pass
+    except: pass
     
     # Left: English
     l = htable.rows[0].cells[2].paragraphs[0]
     l.text = "University Of Alturath\nDept. Of Admin & Financial Affairs\nHR Department"
     l.alignment = WD_ALIGN_PARAGRAPH.LEFT
     
-    # 2. SEPARATOR LINE (Maroon #8F0B0B)
+    # 2. MAROON SEPARATOR
     p_line = doc.add_paragraph()
     run_line = p_line.add_run("______________________________________________________________________")
     run_line.font.color.rgb = RGBColor(0x8F, 0x0B, 0x0B) 
@@ -68,32 +59,38 @@ def create_word_doc(df):
     body.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     set_rtl(body)
 
-    # 4. DATA TABLE
-    table = doc.add_table(rows=1, cols=4)
+    # 4. DATA TABLE (5 Columns)
+    # Order: ت | الاسم | الحالة | العدد | التواريخ
+    table = doc.add_table(rows=1, cols=5)
     table.style = 'Table Grid'
+    set_table_rtl(table) # Force table RTL
+    
     hdr = table.rows[0].cells
-    labels = ['الاسم', 'الحالة', 'العدد', 'التواريخ']
+    labels = ['ت', 'الاسم', 'الحالة', 'العدد', 'التواريخ']
     for i, txt in enumerate(labels):
         hdr[i].text = txt
+        hdr[i].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         set_rtl(hdr[i].paragraphs[0])
 
-    for _, row in df.iterrows():
+    # 5. FILL DATA
+    for index, row in df.iterrows():
         cells = table.add_row().cells
-        cells[0].text = str(row['Name'])
-        cells[1].text = "تأخير" if "Late" in row['Status'] else "غياب"
-        cells[2].text = str(row['Count'])
+        cells[0].text = str(index + 1) # Serial Number
+        cells[1].text = str(row['Name'])
+        cells[2].text = "تأخير" if "Late" in row['Status'] else "غياب"
+        cells[3].text = str(row['Count'])
         
-        # Small font for dates to fit 30 days if needed
-        d_para = cells[3].paragraphs[0]
+        # Small font for dates
+        d_para = cells[4].paragraphs[0]
         d_run = d_para.add_run(row['Dates_Str'])
         d_run.font.size = Pt(8)
         
-        # Apply RTL to all cells in the row
-        for cell in cells:
-            for paragraph in cell.paragraphs:
-                set_rtl(paragraph)
+        # Apply RTL and Center alignment to all cells
+        for i, cell in enumerate(cells):
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            set_rtl(cell.paragraphs[0])
 
-    # 5. SIGNATURE
+    # 6. SIGNATURE
     doc.add_paragraph("\n\n")
     sig = doc.add_paragraph("م.م محمد زهير طالب النقيب\nمدير قسم الشؤون الادارية والموارد البشرية")
     sig.alignment = WD_ALIGN_PARAGRAPH.LEFT
