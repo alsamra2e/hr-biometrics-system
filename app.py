@@ -105,7 +105,6 @@ def create_word_doc(df):
     return buf
 
 def run_exceptions_module():
-    """Logic for the 'Exceptions Audit' mode."""
     st.subheader("📋 Exceptions & Attendance Audit")
     uploaded_files = st.file_uploader("Upload Daily Excels (Multiple)", accept_multiple_files=True, type=['xlsx', 'xls'])
     
@@ -117,31 +116,41 @@ def run_exceptions_module():
                 engine = 'xlrd' if f.name.endswith('.xls') else 'openpyxl'
                 df = pd.read_excel(f, engine=engine)
                 df.columns = [str(c).strip() for c in df.columns]
-                df['Report_Date'] = file_date
-                all_data.append(df)
+                
+                # Verify column exists
+                if 'Status' in df.columns and 'Name' in df.columns:
+                    # Filter for Late and Absence specifically
+                    # This ignores "On Time" and "Weekly Off" automatically
+                    mask = df['Status'].str.contains('Late|Absence', case=False, na=False)
+                    day_exceptions = df[mask].copy()
+                    
+                    # Clean the status (remove emojis for the final report)
+                    day_exceptions['Status'] = day_exceptions['Status'].apply(
+                        lambda x: 'Late' if 'Late' in str(x) else 'Absence'
+                    )
+                    
+                    day_exceptions['Report_Date'] = file_date
+                    all_data.append(day_exceptions[['Name', 'Status', 'Report_Date']])
             except Exception as e:
                 st.error(f"Error in {f.name}: {e}")
         
         if all_data:
             combined_df = pd.concat(all_data, ignore_index=True)
-            mask = combined_df['Status'].str.contains('Late|Absence', case=False, na=False)
-            exceptions = combined_df[mask].copy()
             
-            if not exceptions.empty:
-                # Aggregate unique dates per employee and status
-                summary = exceptions.groupby(['Name', 'Status'])['Report_Date'].unique().reset_index()
-                summary['Count'] = summary['Report_Date'].apply(len)
-                summary['Dates_Str'] = summary['Report_Date'].apply(lambda x: ", ".join(sorted(x)))
+            # Grouping to count occurrences and list dates
+            summary = combined_df.groupby(['Name', 'Status'])['Report_Date'].unique().reset_index()
+            summary['Count'] = summary['Report_Date'].apply(len)
+            summary['Dates_Str'] = summary['Report_Date'].apply(lambda x: ", ".join(sorted(x)))
 
-                st.info(f"Summary: Found {len(summary)} records of violations.")
-                st.dataframe(summary[['Name', 'Status', 'Count', 'Dates_Str']], use_container_width=True)
-                
-                if st.button("Generate Official Alturath Word Report"):
-                    with st.spinner("Processing..."):
-                        report_bytes = create_word_doc(summary)
-                        st.download_button("📥 Download Official Report", report_bytes, "Alturath_Exceptions_Report.docx")
-            else:
-                st.success("Perfect! No Lates or Absences detected.")
+            st.info(f"Summary: Found {len(summary)} employees with violations across the uploaded period.")
+            st.dataframe(summary[['Name', 'Status', 'Count', 'Dates_Str']], use_container_width=True)
+            
+            if st.button("Generate Official Alturath Word Report"):
+                with st.spinner("Processing Arabic Document..."):
+                    report_bytes = create_word_doc(summary)
+                    st.download_button("📥 Download Official Report", report_bytes, "Alturath_Exceptions_Report.docx")
+        else:
+            st.warning("No files with 'Status' columns were detected. Please upload exported reports.")
 
 # --- 3. MAIN APP STRUCTURE ---
 
