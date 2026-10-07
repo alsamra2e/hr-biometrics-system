@@ -1,36 +1,20 @@
-import os
-import re
-from io import BytesIO
-from datetime import date, time, timedelta
-
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import re
+import os
 
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
-from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+
+from io import BytesIO
+from datetime import date, time, timedelta
 
 
 # ============================================================
 # ALTURATH HR BIOMETRICS SYSTEM V2
-# ============================================================
-# Daily HR rule:
-#
-# Selected date = TODAY / CHECK-IN
-# Previous date = CHECK-OUT
-#
-# Example:
-# Report Date: 07 Oct
-# Check-In:    07 Oct
-# Check-Out:   06 Oct
-#
-# Biometric:
-# دخول(1)                  -> Check-In
-# خروج(2) before 12:00     -> Check-In
-# خروج(2) at/after 12:00  -> Check-Out
 # ============================================================
 
 
@@ -42,7 +26,7 @@ st.set_page_config(
     page_title="Alturath HR • Biometric Attendance",
     page_icon="◈",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
 
@@ -52,455 +36,557 @@ st.set_page_config(
 
 UNIVERSITY_NAME = "University Of Alturath"
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOCAL_LOGO = os.path.join(BASE_DIR, "logo(1).png")
+LOCAL_LOGO = "logo(1).png"
 
 
 # ============================================================
-# 3. GLOBAL THEME
+# 3. THEME
 # ============================================================
 
 def apply_theme():
+
     st.markdown(
         """
-        <style>
+<style>
 
-        /* ====================================================
-           BASE
-        ==================================================== */
+/* ==========================================================
+   BASE
+   ========================================================== */
 
-        @import url(
-            'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
+:root {
+    --navy: #071426;
+    --navy-2: #0b1d33;
+    --blue: #2563eb;
+    --blue-2: #3b82f6;
+    --cyan: #06b6d4;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+    --green: #16a34a;
+    --red: #dc2626;
+    --orange: #ea580c;
+    --yellow: #ca8a04;
+}
+
+html,
+body,
+[data-testid="stAppViewContainer"] {
+    background: #f4f7fb;
+}
+
+html,
+body,
+.stApp,
+.stApp * {
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+/* ==========================================================
+   MAIN CONTAINER
+   ========================================================== */
+
+.block-container {
+    max-width: 1500px !important;
+    padding-top: 1.5rem !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    padding-bottom: 3rem !important;
+}
+
+/* ==========================================================
+   SIDEBAR
+   ========================================================== */
+
+section[data-testid="stSidebar"] {
+    background:
+        linear-gradient(
+            180deg,
+            #061221 0%,
+            #09182a 55%,
+            #0b1d33 100%
+        ) !important;
+
+    border-right: 1px solid #1e293b;
+}
+
+section[data-testid="stSidebar"] > div {
+    padding-top: 1rem;
+}
+
+section[data-testid="stSidebar"] * {
+    color: #e5edf7;
+}
+
+section[data-testid="stSidebar"] label {
+    color: #9fb0c4 !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+}
+
+/* Sidebar selectbox */
+
+section[data-testid="stSidebar"]
+div[data-baseweb="select"] > div {
+    background: #101f34 !important;
+    border: 1px solid #263852 !important;
+    border-radius: 10px !important;
+    color: #ffffff !important;
+}
+
+/* Sidebar date */
+
+section[data-testid="stSidebar"]
+div[data-baseweb="input"] {
+    background: #101f34 !important;
+    border: 1px solid #263852 !important;
+    border-radius: 10px !important;
+}
+
+section[data-testid="stSidebar"]
+input {
+    color: #ffffff !important;
+}
+
+/* Sidebar uploader */
+
+section[data-testid="stSidebar"]
+[data-testid="stFileUploader"] {
+    margin-bottom: 0.7rem;
+}
+
+section[data-testid="stSidebar"]
+[data-testid="stFileUploaderDropzone"] {
+    background: #0d1c30 !important;
+    border: 1px dashed #334966 !important;
+    border-radius: 10px !important;
+}
+
+section[data-testid="stSidebar"]
+[data-testid="stFileUploaderDropzoneInstructions"] {
+    color: #a8b8cb !important;
+}
+
+/* ==========================================================
+   BRAND
+   ========================================================== */
+
+.sidebar-brand {
+    padding: 0.3rem 0.2rem 1.5rem 0.2rem;
+}
+
+.sidebar-logo {
+    width: 62px;
+    height: 62px;
+    object-fit: contain;
+    background: #ffffff;
+    border-radius: 15px;
+    padding: 7px;
+    margin-bottom: 0.8rem;
+    box-shadow:
+        0 12px 30px rgba(0, 0, 0, 0.22);
+}
+
+.sidebar-brand-name {
+    color: #ffffff;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+.sidebar-brand-sub {
+    color: #6f849c;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 1.1px;
+    margin-top: 0.25rem;
+}
+
+/* ==========================================================
+   TOP BRAND
+   ========================================================== */
+
+.top-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1rem;
+}
+
+.top-brand-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 5px;
+}
+
+.top-brand-title {
+    color: #0f172a;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.top-brand-subtitle {
+    color: #64748b;
+    font-size: 0.68rem;
+    margin-top: 2px;
+}
+
+/* ==========================================================
+   HERO
+   ========================================================== */
+
+.hero-card {
+    position: relative;
+    overflow: hidden;
+
+    background:
+        linear-gradient(
+            135deg,
+            #071426 0%,
+            #0c1d34 60%,
+            #102b4a 100%
         );
 
-        html,
-        body,
-        [class*="css"] {
-            font-family: "Inter", sans-serif;
-        }
+    border: 1px solid #1d3552;
+    border-radius: 20px;
 
-        .stApp {
-            background:
-                linear-gradient(
-                    180deg,
-                    #f8fafc 0%,
-                    #f1f5f9 100%
-                );
-            color: #0f172a;
-        }
+    padding: 2rem 2.2rem;
+    margin-bottom: 1rem;
 
-        .main .block-container {
-            padding-top: 1.5rem;
-            padding-bottom: 2rem;
-            max-width: 1450px;
-        }
+    box-shadow:
+        0 18px 45px rgba(15, 23, 42, 0.12);
+}
 
-        /* ====================================================
-           SIDEBAR
-        ==================================================== */
+.hero-card::after {
+    content: "";
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    right: -110px;
+    top: -140px;
+    border-radius: 50%;
 
-        section[data-testid="stSidebar"] {
-            background: #071426;
-            border-right: 1px solid #172b46;
-        }
+    background:
+        radial-gradient(
+            circle,
+            rgba(59, 130, 246, 0.30),
+            rgba(59, 130, 246, 0) 70%
+        );
 
-        section[data-testid="stSidebar"] > div {
-            background: #071426;
-        }
+    pointer-events: none;
+}
 
-        section[data-testid="stSidebar"] * {
-            color: #e2e8f0;
-        }
+.hero-kicker {
+    color: #60a5fa;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 0.45rem;
+}
 
-        section[data-testid="stSidebar"] label {
-            color: #94a3b8 !important;
-            font-size: 12px !important;
-            font-weight: 600 !important;
-        }
+.hero-title {
+    color: #ffffff;
+    font-size: clamp(1.45rem, 3vw, 2rem);
+    font-weight: 800;
+    line-height: 1.15;
+    margin: 0;
+}
 
-        section[data-testid="stSidebar"] .stSelectbox > div > div,
-        section[data-testid="stSidebar"] .stDateInput > div > div {
-            background: #0d1d31 !important;
-            border: 1px solid #223957 !important;
-            border-radius: 10px !important;
-        }
+.hero-text {
+    color: #a9b8ca;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    margin-top: 0.65rem;
+    max-width: 760px;
+}
 
-        section[data-testid="stSidebar"] input {
-            color: #e2e8f0 !important;
-        }
+/* ==========================================================
+   DATE CARD
+   ========================================================== */
 
-        section[data-testid="stSidebar"] .stFileUploader {
-            background: #0b1a2d;
-            border: 1px solid #1d334f;
-            border-radius: 12px;
-            padding: 7px;
-            margin-bottom: 10px;
-        }
+.date-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
 
-        section[data-testid="stSidebar"] .stFileUploader section {
-            border: none !important;
-            background: transparent !important;
-        }
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
 
-        section[data-testid="stSidebar"] .stFileUploader small {
-            color: #64748b !important;
-        }
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 1rem;
 
-        section[data-testid="stSidebar"] .stButton button {
-            background: #2563eb !important;
-            border: 1px solid #3b82f6 !important;
-        }
+    box-shadow:
+        0 5px 18px rgba(15, 23, 42, 0.04);
+}
 
-        /* ====================================================
-           BRAND
-        ==================================================== */
+.date-main {
+    color: #0f172a;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
 
-        .brand-box {
-            padding: 8px 4px 22px 4px;
-        }
+.date-sub {
+    color: #64748b;
+    font-size: 0.72rem;
+    margin-top: 0.2rem;
+}
 
-        .brand-logo-wrap {
-            width: 62px;
-            height: 62px;
-            background: #ffffff;
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 7px;
-            margin-bottom: 13px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.20);
-        }
+.checkout-pill {
+    white-space: nowrap;
 
-        .brand-logo {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            border-radius: 9px;
-        }
+    color: #1d4ed8;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
 
-        .brand-title {
-            color: #f8fafc;
-            font-size: 19px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-        }
+    border-radius: 999px;
 
-        .brand-subtitle {
-            color: #64748b;
-            font-size: 9px;
-            letter-spacing: 1.5px;
-            margin-top: 4px;
-            text-transform: uppercase;
-        }
+    padding: 0.45rem 0.75rem;
 
-        .sidebar-section {
-            color: #60a5fa;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            margin: 20px 0 8px 2px;
-        }
+    font-size: 0.7rem;
+    font-weight: 800;
+}
 
-        /* ====================================================
-           HERO
-        ==================================================== */
+/* ==========================================================
+   METRICS
+   ========================================================== */
 
-        .hero-card {
-            position: relative;
-            overflow: hidden;
-            background:
-                linear-gradient(
-                    135deg,
-                    #08172b 0%,
-                    #0c203b 60%,
-                    #102b4c 100%
-                );
-            border: 1px solid #17304e;
-            border-radius: 22px;
-            padding: 30px 32px;
-            margin-bottom: 18px;
-            box-shadow:
-                0 18px 45px rgba(15, 23, 42, 0.12);
-        }
+div[data-testid="stMetric"] {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
 
-        .hero-card:before {
-            content: "";
-            position: absolute;
-            width: 360px;
-            height: 360px;
-            right: -170px;
-            top: -220px;
-            border-radius: 50%;
-            background: rgba(37, 99, 235, 0.24);
-        }
+    padding: 0.8rem 0.9rem !important;
 
-        .hero-card:after {
-            content: "";
-            position: absolute;
-            width: 170px;
-            height: 170px;
-            right: 60px;
-            bottom: -130px;
-            border-radius: 50%;
-            background: rgba(14, 165, 233, 0.10);
-        }
+    box-shadow:
+        0 5px 18px rgba(15, 23, 42, 0.035);
+}
 
-        .hero-content {
-            position: relative;
-            z-index: 2;
-        }
+div[data-testid="stMetricLabel"] {
+    color: #64748b !important;
+    font-size: 0.7rem !important;
+}
 
-        .hero-kicker {
-            color: #60a5fa;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 9px;
-        }
+div[data-testid="stMetricValue"] {
+    color: #0f172a !important;
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+}
 
-        .hero-title {
-            color: #ffffff;
-            font-size: 29px;
-            line-height: 1.15;
-            font-weight: 800;
-            letter-spacing: -0.9px;
-            margin: 0;
-        }
+/* ==========================================================
+   SECTION TITLES
+   ========================================================== */
 
-        .hero-arabic {
-            color: #cbd5e1;
-            font-size: 13px;
-            margin-top: 9px;
-            direction: rtl;
-            text-align: left;
-        }
+.section-heading {
+    display: flex;
+    align-items: center;
+    gap: 9px;
 
-        .hero-description {
-            color: #94a3b8;
-            font-size: 12px;
-            line-height: 1.6;
-            margin-top: 9px;
-            max-width: 750px;
-        }
+    color: #0f172a;
 
-        /* ====================================================
-           DATE CARD
-        ==================================================== */
+    font-size: 1rem;
+    font-weight: 800;
 
-        .date-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 15px;
-            padding: 15px 18px;
-            margin-bottom: 17px;
-            box-shadow:
-                0 5px 18px rgba(15, 23, 42, 0.04);
-        }
+    margin-top: 1.4rem;
+    margin-bottom: 0.65rem;
+}
 
-        .date-label {
-            color: #64748b;
-            font-size: 9px;
-            font-weight: 800;
-            letter-spacing: 1.4px;
-            text-transform: uppercase;
-        }
+.section-heading::before {
+    content: "";
+    width: 4px;
+    height: 18px;
 
-        .date-main {
-            color: #0f172a;
-            font-size: 16px;
-            font-weight: 800;
-            margin-top: 3px;
-        }
+    border-radius: 10px;
 
-        .date-ar {
-            color: #64748b;
-            font-size: 11px;
-            margin-top: 2px;
-        }
+    background: #2563eb;
+}
 
-        .date-pill {
-            background: #eff6ff;
-            color: #2563eb;
-            border: 1px solid #dbeafe;
-            border-radius: 999px;
-            padding: 8px 13px;
-            font-size: 11px;
-            font-weight: 700;
-            text-align: center;
-        }
+/* ==========================================================
+   INFO CARD
+   ========================================================== */
 
-        .date-pill-small {
-            color: #64748b;
-            font-size: 9px;
-            margin-top: 2px;
-            text-align: center;
-        }
+.info-card {
+    background: #ffffff;
 
-        /* ====================================================
-           METRICS
-        ==================================================== */
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #2563eb;
 
-        div[data-testid="stMetric"] {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 12px 15px;
-            box-shadow:
-                0 5px 18px rgba(15, 23, 42, 0.035);
-        }
+    border-radius: 12px;
 
-        div[data-testid="stMetricLabel"] {
-            color: #64748b !important;
-            font-size: 10px !important;
-            font-weight: 600 !important;
-        }
+    padding: 0.85rem 1rem;
 
-        div[data-testid="stMetricValue"] {
-            color: #0f172a !important;
-            font-weight: 800 !important;
-        }
+    color: #475569;
+    font-size: 0.76rem;
+    line-height: 1.8;
 
-        /* ====================================================
-           SECTION TITLES
-        ==================================================== */
+    margin: 0.8rem 0;
+}
 
-        .section-heading {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 25px;
-            margin-bottom: 10px;
-        }
+.info-card strong {
+    color: #0f172a;
+}
 
-        .section-line {
-            width: 4px;
-            height: 22px;
-            border-radius: 5px;
-            background: #2563eb;
-        }
+/* ==========================================================
+   TABLE
+   ========================================================== */
 
-        .section-text {
-            color: #0f172a;
-            font-size: 15px;
-            font-weight: 800;
-        }
+div[data-testid="stDataFrame"] {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow:
+        0 6px 20px rgba(15, 23, 42, 0.04);
+}
 
-        .section-en {
-            color: #94a3b8;
-            font-size: 9px;
-            font-weight: 600;
-            margin-left: 2px;
-            letter-spacing: 0.5px;
-        }
+/* ==========================================================
+   BUTTONS
+   ========================================================== */
 
-        /* ====================================================
-           INFO CARD
-        ==================================================== */
+.stButton > button,
+.stDownloadButton > button {
+    min-height: 42px;
 
-        .info-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-left: 4px solid #2563eb;
-            border-radius: 12px;
-            padding: 13px 16px;
-            margin-top: 14px;
-            color: #475569;
-            font-size: 11px;
-            line-height: 1.8;
-            box-shadow:
-                0 4px 16px rgba(15, 23, 42, 0.03);
-        }
+    border-radius: 10px !important;
 
-        .info-card strong {
-            color: #0f172a;
-        }
+    background: #2563eb !important;
+    color: #ffffff !important;
 
-        /* ====================================================
-           TABLE
-        ==================================================== */
+    border: 1px solid #2563eb !important;
 
-        div[data-testid="stDataFrame"] {
-            border: 1px solid #dbe3ed;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow:
-                0 7px 24px rgba(15, 23, 42, 0.05);
-            background: #ffffff;
-        }
+    font-weight: 700 !important;
 
-        /* ====================================================
-           BUTTONS
-        ==================================================== */
+    box-shadow:
+        0 5px 14px rgba(37, 99, 235, 0.14);
 
-        .stButton > button,
-        .stDownloadButton > button {
-            border-radius: 10px !important;
-            border: 1px solid #2563eb !important;
-            background: #2563eb !important;
-            color: #ffffff !important;
-            font-weight: 700 !important;
-            min-height: 40px !important;
-            transition: 0.18s ease !important;
-        }
+    transition:
+        transform 0.15s ease,
+        background 0.15s ease,
+        box-shadow 0.15s ease;
+}
 
-        .stButton > button:hover,
-        .stDownloadButton > button:hover {
-            background: #1d4ed8 !important;
-            border-color: #1d4ed8 !important;
-            transform: translateY(-1px);
-            box-shadow:
-                0 8px 20px rgba(37, 99, 235, 0.18);
-        }
+.stButton > button:hover,
+.stDownloadButton > button:hover {
+    background: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
 
-        /* ====================================================
-           FOOTER
-        ==================================================== */
+    transform: translateY(-1px);
 
-        .footer {
-            text-align: center;
-            color: #94a3b8;
-            font-size: 9px;
-            letter-spacing: 1px;
-            padding: 28px 0 8px 0;
-        }
+    box-shadow:
+        0 8px 20px rgba(37, 99, 235, 0.20);
+}
 
-        /* ====================================================
-           FILE UPLOADER
-        ==================================================== */
+/* ==========================================================
+   FILE UPLOAD MAIN AREA
+   ========================================================== */
 
-        [data-testid="stFileUploaderDropzone"] {
-            background: #f8fafc !important;
-            border: 1px dashed #cbd5e1 !important;
-            border-radius: 10px !important;
-        }
+[data-testid="stFileUploaderDropzone"] {
+    border-radius: 12px !important;
+}
 
-        /* ====================================================
-           MOBILE
-        ==================================================== */
+/* ==========================================================
+   FOOTER
+   ========================================================== */
 
-        @media (max-width: 800px) {
+.footer {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.66rem;
+    padding: 2rem 0 0.5rem 0;
+}
 
-            .hero-card {
-                padding: 23px;
-                border-radius: 17px;
-            }
+/* ==========================================================
+   MOBILE / RESPONSIVE
+   ========================================================== */
 
-            .hero-title {
-                font-size: 24px;
-            }
+@media (max-width: 900px) {
 
-            .main .block-container {
-                padding-left: 1rem;
-                padding-right: 1rem;
-            }
-        }
+    .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        padding-top: 1rem !important;
+    }
 
-        </style>
+    .hero-card {
+        padding: 1.35rem 1.25rem;
+        border-radius: 16px;
+    }
+
+    .hero-title {
+        font-size: 1.45rem;
+    }
+
+    .date-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .checkout-pill {
+        white-space: normal;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .block-container {
+        padding-left: 0.7rem !important;
+        padding-right: 0.7rem !important;
+    }
+
+    .hero-card {
+        padding: 1.15rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-kicker {
+        font-size: 0.58rem;
+        letter-spacing: 1.3px;
+    }
+
+    .hero-title {
+        font-size: 1.3rem;
+    }
+
+    .hero-text {
+        font-size: 0.72rem;
+    }
+
+    .date-card {
+        padding: 0.8rem;
+    }
+
+    div[data-testid="stMetric"] {
+        padding: 0.65rem !important;
+    }
+
+    div[data-testid="stMetricValue"] {
+        font-size: 1.15rem !important;
+    }
+
+    .section-heading {
+        font-size: 0.9rem;
+    }
+
+    .info-card {
+        font-size: 0.7rem;
+    }
+}
+
+</style>
         """,
-        unsafe_allow_html=True,
+        unsafe_allow_html=True
     )
 
 
@@ -508,181 +594,141 @@ apply_theme()
 
 
 # ============================================================
-# 4. SAFE HTML RENDER HELPER
+# 4. LOGO
 # ============================================================
 
-def render_html(html):
-    """
-    Central HTML renderer.
+def get_logo_path():
 
-    Keeping HTML in one place prevents accidental
-    markdown/code-block rendering problems.
-    """
-    st.markdown(
-        html,
-        unsafe_allow_html=True,
-    )
+    candidates = [
+        LOCAL_LOGO,
+        os.path.join(
+            os.path.dirname(__file__),
+            LOCAL_LOGO
+        )
+    ]
 
+    for path in candidates:
 
-# ============================================================
-# 5. LOCAL LOGO
-# ============================================================
+        if os.path.exists(path):
 
-@st.cache_data(show_spinner=False)
-def get_logo_bytes():
-    try:
-        if os.path.exists(LOCAL_LOGO):
-            with open(LOCAL_LOGO, "rb") as f:
-                return f.read()
+            return path
 
-        return None
-
-    except Exception:
-        return None
+    return None
 
 
 def show_sidebar_brand():
-    logo_bytes = get_logo_bytes()
 
-    if logo_bytes:
-        import base64
+    logo_path = get_logo_path()
 
-        encoded = base64.b64encode(
-            logo_bytes
-        ).decode("utf-8")
+    if logo_path:
 
-        render_html(
+        st.sidebar.markdown(
             f"""
-            <div class="brand-box">
+<div class="sidebar-brand">
+    <img
+        class="sidebar-logo"
+        src="data:image/png;base64,{__import__('base64').b64encode(open(logo_path, 'rb').read()).decode()}"
+    />
 
-                <div class="brand-logo-wrap">
-                    <img
-                        class="brand-logo"
-                        src="data:image/png;base64,{encoded}"
-                    />
-                </div>
+    <div class="sidebar-brand-name">
+        ALTURATH HR
+    </div>
 
-                <div class="brand-title">
-                    ALTURATH HR
-                </div>
-
-                <div class="brand-subtitle">
-                    BIOMETRIC ATTENDANCE • V2
-                </div>
-
-            </div>
-            """
+    <div class="sidebar-brand-sub">
+        BIOMETRIC ATTENDANCE SYSTEM
+    </div>
+</div>
+            """,
+            unsafe_allow_html=True
         )
 
     else:
-        render_html(
+
+        st.sidebar.markdown(
             """
-            <div class="brand-box">
+<div class="sidebar-brand">
+    <div class="sidebar-brand-name">
+        ALTURATH HR
+    </div>
 
-                <div
-                    class="brand-logo-wrap"
-                    style="
-                        color:#2563eb;
-                        font-size:25px;
-                        font-weight:800;
-                    "
-                >
-                    ◈
-                </div>
+    <div class="sidebar-brand-sub">
+        BIOMETRIC ATTENDANCE SYSTEM
+    </div>
+</div>
+            """,
+            unsafe_allow_html=True
+        )
 
-                <div class="brand-title">
-                    ALTURATH HR
-                </div>
 
-                <div class="brand-subtitle">
-                    BIOMETRIC ATTENDANCE • V2
-                </div>
+def show_top_brand():
 
-            </div>
-            """
+    logo_path = get_logo_path()
+
+    if logo_path:
+
+        encoded = __import__("base64").b64encode(
+            open(logo_path, "rb").read()
+        ).decode()
+
+        st.markdown(
+            f"""
+<div class="top-brand">
+    <img
+        class="top-brand-logo"
+        src="data:image/png;base64,{encoded}"
+    />
+
+    <div>
+        <div class="top-brand-title">
+            ALTURATH UNIVERSITY
+        </div>
+
+        <div class="top-brand-subtitle">
+            Human Resources • Biometric Attendance
+        </div>
+    </div>
+</div>
+            """,
+            unsafe_allow_html=True
         )
 
 
 # ============================================================
-# 6. WORD RTL UTILITIES
+# 5. WORD RTL HELPERS
 # ============================================================
 
 def set_rtl(paragraph):
+
     p = paragraph._element
     pPr = p.get_or_add_pPr()
 
-    bidi = pPr.find(
-        qn("w:bidi")
-    )
+    bidi = pPr.find(qn("w:bidi"))
 
     if bidi is None:
+
         bidi = OxmlElement("w:bidi")
         pPr.append(bidi)
 
 
 def set_table_rtl(table):
-    tbl_pr = table._element.tblPr
 
-    bidi = OxmlElement("w:bidiVisual")
-    tbl_pr.append(bidi)
+    tbl_pr = table._element.xpath("w:tblPr")
 
+    if tbl_pr:
 
-def shade_cell(cell, fill):
-    tc_pr = cell._tc.get_or_add_tcPr()
-
-    shd = tc_pr.find(
-        qn("w:shd")
-    )
-
-    if shd is None:
-        shd = OxmlElement("w:shd")
-        tc_pr.append(shd)
-
-    shd.set(
-        qn("w:fill"),
-        fill
-    )
-
-
-def set_cell_text(
-    cell,
-    text_value,
-    bold=False,
-    size=9,
-    color="000000",
-    rtl=True,
-):
-    cell.text = ""
-
-    paragraph = cell.paragraphs[0]
-    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-    if rtl:
-        set_rtl(paragraph)
-
-    run = paragraph.add_run(
-        str(text_value)
-    )
-
-    run.bold = bold
-    run.font.size = Pt(size)
-    run.font.color.rgb = RGBColor.from_string(
-        color
-    )
-
-    cell.vertical_alignment = (
-        WD_CELL_VERTICAL_ALIGNMENT.CENTER
-    )
+        bidi = OxmlElement("w:bidiVisual")
+        tbl_pr[0].append(bidi)
 
 
 # ============================================================
-# 7. FILE DATE
+# 6. FILE DATE
 # ============================================================
 
 def extract_date_from_filename(filename):
+
     match = re.search(
         r"\d{4}-\d{2}-\d{2}",
-        filename,
+        filename
     )
 
     if match:
@@ -692,55 +738,41 @@ def extract_date_from_filename(filename):
 
 
 # ============================================================
-# 8. BIOMETRIC EVENT CLASSIFICATION
+# 7. BIOMETRIC CLASSIFICATION
 # ============================================================
 
 def classify_gate_event(
     event_value,
-    punch_datetime,
+    punch_datetime
 ):
-    """
-    Biometric logic:
 
-    دخول(1)
-        -> Check-In
+    event = str(event_value).strip()
 
-    خروج(2) before 12:00
-        -> Check-In
+    punch_time = punch_datetime.time()
 
-    خروج(2) at/after 12:00
-        -> Check-Out
-    """
-
-    event = str(
-        event_value
-    ).strip()
-
-    punch_time = (
-        punch_datetime.time()
-    )
-
+    # دخول(1) = Check-In
     if "دخول" in event:
         return "Check-In"
 
+    # خروج(2)
     if "خروج" in event:
 
+        # Before 12:00 = Check-In
         if punch_time < time(12, 0):
             return "Check-In"
 
+        # 12:00 and after = Check-Out
         return "Check-Out"
 
     return None
 
 
 # ============================================================
-# 9. PROCESS GATE FILE
+# 8. PROCESS GATE
 # ============================================================
 
-def process_gate(
-    file,
-    gate_name,
-):
+def process_gate(file, gate_name):
+
     try:
 
         engine = (
@@ -751,7 +783,7 @@ def process_gate(
 
         df = pd.read_excel(
             file,
-            engine=engine,
+            engine=engine
         )
 
         df.columns = [
@@ -759,79 +791,38 @@ def process_gate(
             for c in df.columns
         ]
 
-        # ----------------------------------------------------
         # NAME
-        # ----------------------------------------------------
-
         if "الاسم" in df.columns:
             name_col = "الاسم"
 
         elif "الإسم" in df.columns:
             name_col = "الإسم"
 
-        elif "Name" in df.columns:
-            name_col = "Name"
-
         else:
+
             st.warning(
-                f"{gate_name}: "
-                "الاسم column was not found."
+                f"{gate_name}: الاسم column was not found."
             )
+
             return pd.DataFrame()
 
-        # ----------------------------------------------------
         # TIME
-        # ----------------------------------------------------
-
         if "الوقت" not in df.columns:
 
-            possible_time = [
-                "Time",
-                "وقت",
-                "التاريخ والوقت",
-                "DateTime",
-            ]
-
-            time_col = None
-
-            for col in possible_time:
-                if col in df.columns:
-                    time_col = col
-                    break
-
-            if time_col is None:
-                st.warning(
-                    f"{gate_name}: "
-                    "الوقت column was not found."
-                )
-                return pd.DataFrame()
-
-        else:
-            time_col = "الوقت"
-
-        # ----------------------------------------------------
-        # EVENT
-        # ----------------------------------------------------
-
-        if "Event" in df.columns:
-            event_col = "Event"
-
-        elif "event" in df.columns:
-            event_col = "event"
-
-        elif "الحدث" in df.columns:
-            event_col = "الحدث"
-
-        else:
             st.warning(
-                f"{gate_name}: "
-                "Event column was not found."
+                f"{gate_name}: الوقت column was not found."
             )
+
             return pd.DataFrame()
 
-        # ----------------------------------------------------
-        # NORMALIZE
-        # ----------------------------------------------------
+        # EVENT
+        if "Event" not in df.columns:
+
+            st.warning(
+                f"{gate_name}: Event column was not found."
+            )
+
+            return pd.DataFrame()
 
         df["Name"] = (
             df[name_col]
@@ -840,13 +831,11 @@ def process_gate(
         )
 
         df["dt"] = pd.to_datetime(
-            df[time_col],
-            errors="coerce",
+            df["الوقت"],
+            errors="coerce"
         )
 
-        df = df[
-            df["dt"].notna()
-        ].copy()
+        df = df[df["dt"].notna()].copy()
 
         df = df[
             (df["Name"] != "")
@@ -857,25 +846,22 @@ def process_gate(
         df["Event_Type"] = df.apply(
             lambda row:
             classify_gate_event(
-                row[event_col],
-                row["dt"],
+                row["Event"],
+                row["dt"]
             ),
-            axis=1,
+            axis=1
         )
 
         df = df[
             df["Event_Type"].notna()
         ].copy()
 
-        df["Date"] = (
-            df["dt"].dt.date
+        df["Date"] = df["dt"].dt.date
+
+        df["Time"] = df["dt"].dt.strftime(
+            "%H:%M"
         )
 
-        df["Time"] = (
-            df["dt"].dt.strftime("%H:%M")
-        )
-
-        # Gate is source/reference ONLY.
         df["Source"] = gate_name
 
         return df[
@@ -885,22 +871,21 @@ def process_gate(
                 "Date",
                 "Time",
                 "Event_Type",
-                "Source",
+                "Source"
             ]
         ].sort_values("dt")
 
     except Exception as e:
 
         st.error(
-            f"Error processing "
-            f"{gate_name}: {e}"
+            f"Error processing {gate_name}: {e}"
         )
 
         return pd.DataFrame()
 
 
 # ============================================================
-# 10. PROCESS MAWJOOD APP
+# 9. PROCESS MAWJOOD APP
 # ============================================================
 
 def process_app(file):
@@ -909,7 +894,7 @@ def process_app(file):
 
         df = pd.read_excel(
             file,
-            header=3,
+            header=3
         )
 
         df.columns = [
@@ -922,17 +907,14 @@ def process_app(file):
 
         result = []
 
-        # ----------------------------------------------------
-        # APP CHECK-IN
-        # ----------------------------------------------------
-
+        # CHECK-IN
         if "دخول" in df.columns:
 
             for _, row in df.iterrows():
 
                 dt = pd.to_datetime(
                     row["دخول"],
-                    errors="coerce",
+                    errors="coerce"
                 )
 
                 if pd.notna(dt):
@@ -951,24 +933,19 @@ def process_app(file):
                                 "%H:%M"
                             ),
 
-                            "Event_Type":
-                                "Check-In",
+                            "Event_Type": "Check-In",
 
-                            "Source":
-                                "Mawjood App",
+                            "Source": "Mawjood App"
                         }
                     )
 
-        # ----------------------------------------------------
-        # APP CHECK-OUT
-        # ----------------------------------------------------
-
+        # CHECK-OUT
         possible_checkout = [
             "خروج",
             "الانصراف",
             "وقت الخروج",
             "Check-Out",
-            "Checkout",
+            "Checkout"
         ]
 
         checkout_col = None
@@ -986,7 +963,7 @@ def process_app(file):
 
                 dt = pd.to_datetime(
                     row[checkout_col],
-                    errors="coerce",
+                    errors="coerce"
                 )
 
                 if pd.notna(dt):
@@ -1005,11 +982,9 @@ def process_app(file):
                                 "%H:%M"
                             ),
 
-                            "Event_Type":
-                                "Check-Out",
+                            "Event_Type": "Check-Out",
 
-                            "Source":
-                                "Mawjood App",
+                            "Source": "Mawjood App"
                         }
                     )
 
@@ -1018,38 +993,24 @@ def process_app(file):
     except Exception as e:
 
         st.error(
-            f"Error processing "
-            f"Mawjood App: {e}"
+            f"Error processing Mawjood App: {e}"
         )
 
         return pd.DataFrame()
 
 
 # ============================================================
-# 11. BUILD DAILY REPORT
+# 10. BUILD DAILY ATTENDANCE
 # ============================================================
 
 def build_daily_attendance(
     df_logs,
     target_date,
     current_weekday_ar,
-    df_off,
+    df_off
 ):
-    """
-    IMPORTANT HR RULE
-
-    Selected date:
-        Check-In
-
-    Previous date:
-        Check-Out
-    """
 
     master_names = set()
-
-    # --------------------------------------------------------
-    # NAMES FROM BIOMETRIC LOGS
-    # --------------------------------------------------------
 
     if not df_logs.empty:
 
@@ -1060,10 +1021,6 @@ def build_daily_attendance(
             .str.strip()
             .tolist()
         )
-
-    # --------------------------------------------------------
-    # NAMES FROM WEEKLY OFF
-    # --------------------------------------------------------
 
     if not df_off.empty:
 
@@ -1083,10 +1040,6 @@ def build_daily_attendance(
         timedelta(days=1)
     )
 
-    # --------------------------------------------------------
-    # EACH EMPLOYEE
-    # --------------------------------------------------------
-
     for name in sorted(master_names):
 
         person = df_logs[
@@ -1097,13 +1050,11 @@ def build_daily_attendance(
             str(name).strip()
         ].copy()
 
-        person = person.sort_values(
-            "dt"
-        )
+        person = person.sort_values("dt")
 
-        # ====================================================
+        # ----------------------------------------------------
         # TODAY CHECK-IN
-        # ====================================================
+        # ----------------------------------------------------
 
         today_checkins = person[
             (person["Date"] == target_date)
@@ -1114,9 +1065,9 @@ def build_daily_attendance(
             )
         ].copy()
 
-        # ====================================================
+        # ----------------------------------------------------
         # YESTERDAY CHECK-OUT
-        # ====================================================
+        # ----------------------------------------------------
 
         yesterday_checkouts = person[
             (person["Date"] == previous_date)
@@ -1127,9 +1078,9 @@ def build_daily_attendance(
             )
         ].copy()
 
-        # ====================================================
+        # ----------------------------------------------------
         # FIRST CHECK-IN
-        # ====================================================
+        # ----------------------------------------------------
 
         check_in = "-"
         check_in_source = "-"
@@ -1142,17 +1093,12 @@ def build_daily_attendance(
                 .iloc[0]
             )
 
-            check_in = str(
-                first_checkin["Time"]
-            )
+            check_in = first_checkin["Time"]
+            check_in_source = first_checkin["Source"]
 
-            check_in_source = str(
-                first_checkin["Source"]
-            )
-
-        # ====================================================
+        # ----------------------------------------------------
         # LAST CHECK-OUT
-        # ====================================================
+        # ----------------------------------------------------
 
         check_out = "-"
         check_out_source = "-"
@@ -1165,17 +1111,12 @@ def build_daily_attendance(
                 .iloc[-1]
             )
 
-            check_out = str(
-                last_checkout["Time"]
-            )
+            check_out = last_checkout["Time"]
+            check_out_source = last_checkout["Source"]
 
-            check_out_source = str(
-                last_checkout["Source"]
-            )
-
-        # ====================================================
+        # ----------------------------------------------------
         # WEEKLY OFF
-        # ====================================================
+        # ----------------------------------------------------
 
         off_info = df_off[
             df_off["Name"]
@@ -1191,8 +1132,7 @@ def build_daily_attendance(
 
             is_off = (
                 str(
-                    off_info["OffDay"]
-                    .iloc[0]
+                    off_info["OffDay"].iloc[0]
                 ).strip()
                 ==
                 str(
@@ -1200,15 +1140,15 @@ def build_daily_attendance(
                 ).strip()
             )
 
-        # ====================================================
+        # ----------------------------------------------------
         # STATUS
-        # ====================================================
+        # ----------------------------------------------------
 
         if check_in != "-":
 
+            # Time comparison
             if check_in > "08:35":
                 status = "🔴 Late"
-
             else:
                 status = "🟢 On Time"
 
@@ -1224,28 +1164,21 @@ def build_daily_attendance(
 
             status = "🔴 Absence"
 
-        # ====================================================
-        # SOURCES
-        # ====================================================
+        # ----------------------------------------------------
+        # SOURCE
+        # ----------------------------------------------------
 
         source_parts = []
 
         if check_in_source != "-":
-
-            source_parts.append(
-                check_in_source
-            )
+            source_parts.append(check_in_source)
 
         if (
             check_out_source != "-"
             and
-            check_out_source
-            not in source_parts
+            check_out_source not in source_parts
         ):
-
-            source_parts.append(
-                check_out_source
-            )
+            source_parts.append(check_out_source)
 
         source = (
             " + ".join(source_parts)
@@ -1259,31 +1192,30 @@ def build_daily_attendance(
                 "Check-In": check_in,
                 "Check-Out": check_out,
                 "Source": source,
-                "Status": status,
+                "Status": status
             }
         )
 
-    return pd.DataFrame(
-        final_data
-    )
+    return pd.DataFrame(final_data)
 
 
 # ============================================================
-# 12. EXCEL EXPORT
+# 11. EXCEL EXPORT
 # ============================================================
 
 def create_daily_excel(
     df_final,
-    target_date,
+    target_date
 ):
+
     """
-    Compact modern LTR Excel.
+    Compact LTR Excel.
 
-    Main headings are Arabic.
-    English is kept small where useful.
-
-    NO RTL Excel setting.
-    NO set_print_area().
+    IMPORTANT:
+    - No RTL
+    - No right_to_left()
+    - No set_print_area()
+    - No unnecessary images
     """
 
     buffer = BytesIO()
@@ -1300,7 +1232,7 @@ def create_daily_excel(
             "Check-In",
             "Check-Out",
             "Source",
-            "Status",
+            "Status"
         ]
     ].copy()
 
@@ -1309,9 +1241,10 @@ def create_daily_excel(
         engine="xlsxwriter",
         engine_kwargs={
             "options": {
-                "strings_to_urls": False
+                "strings_to_urls": False,
+                "constant_memory": True
             }
-        },
+        }
     ) as writer:
 
         workbook = writer.book
@@ -1320,9 +1253,7 @@ def create_daily_excel(
             "Attendance"
         )
 
-        writer.sheets[
-            "Attendance"
-        ] = worksheet
+        writer.sheets["Attendance"] = worksheet
 
         # ====================================================
         # FORMATS
@@ -1333,26 +1264,25 @@ def create_daily_excel(
                 "bold": True,
                 "font_size": 13,
                 "font_color": "#FFFFFF",
-                "bg_color": "#0B1D35",
+                "bg_color": "#071426",
                 "align": "center",
-                "valign": "vcenter",
+                "valign": "vcenter"
             }
         )
 
         subtitle_format = workbook.add_format(
             {
-                "font_size": 8,
-                "font_color": "#64748B",
+                "font_size": 9,
+                "font_color": "#475569",
                 "bg_color": "#F8FAFC",
                 "align": "center",
-                "valign": "vcenter",
+                "valign": "vcenter"
             }
         )
 
         header_format = workbook.add_format(
             {
                 "bold": True,
-                "font_size": 10,
                 "font_color": "#FFFFFF",
                 "bg_color": "#2563EB",
                 "align": "center",
@@ -1360,26 +1290,17 @@ def create_daily_excel(
                 "border": 1,
                 "border_color": "#CBD5E1",
                 "text_wrap": True,
+                "font_size": 10
             }
         )
 
         cell_format = workbook.add_format(
             {
-                "font_size": 9,
                 "align": "center",
                 "valign": "vcenter",
                 "border": 1,
                 "border_color": "#E2E8F0",
-            }
-        )
-
-        name_format = workbook.add_format(
-            {
-                "font_size": 9,
-                "align": "left",
-                "valign": "vcenter",
-                "border": 1,
-                "border_color": "#E2E8F0",
+                "font_size": 9
             }
         )
 
@@ -1389,29 +1310,24 @@ def create_daily_excel(
 
         worksheet.merge_range(
             "A1:F1",
-            "جامعة التراث — سجل الحضور اليومي",
-            title_format,
+            "كشف الحضور اليومي — ALTURATH HR",
+            title_format
         )
 
         worksheet.merge_range(
             "A2:F2",
             (
-                f"DAILY ATTENDANCE • HR SUBMISSION    |    "
-                f"Check-In: {target_date.strftime('%d %b %Y')}    |    "
-                f"Check-Out: {previous_date.strftime('%d %b %Y')}"
+                f"تاريخ الحضور: "
+                f"{target_date.strftime('%d %b %Y')}"
+                f"    |    "
+                f"تاريخ الانصراف: "
+                f"{previous_date.strftime('%d %b %Y')}"
             ),
-            subtitle_format,
+            subtitle_format
         )
 
-        worksheet.set_row(
-            0,
-            27,
-        )
-
-        worksheet.set_row(
-            1,
-            20,
-        )
+        worksheet.set_row(0, 25)
+        worksheet.set_row(1, 20)
 
         # ====================================================
         # HEADERS
@@ -1421,15 +1337,15 @@ def create_daily_excel(
             "ت\nNo.",
             "الاسم\nName",
             (
-                "الحضور\n"
+                "وقت الدخول\n"
                 f"Check-In ({target_date.strftime('%d %b')})"
             ),
             (
-                "الانصراف\n"
+                "وقت الانصراف\n"
                 f"Check-Out ({previous_date.strftime('%d %b')})"
             ),
             "المصدر\nSource",
-            "الحالة\nStatus",
+            "الحالة\nStatus"
         ]
 
         for col, header in enumerate(headers):
@@ -1438,13 +1354,10 @@ def create_daily_excel(
                 2,
                 col,
                 header,
-                header_format,
+                header_format
             )
 
-        worksheet.set_row(
-            2,
-            38,
-        )
+        worksheet.set_row(2, 36)
 
         # ====================================================
         # DATA
@@ -1460,85 +1373,64 @@ def create_daily_excel(
                 excel_row,
                 0,
                 i + 1,
-                cell_format,
+                cell_format
             )
 
             worksheet.write(
                 excel_row,
                 1,
                 str(row["Name"]),
-                name_format,
+                cell_format
             )
 
             worksheet.write(
                 excel_row,
                 2,
                 str(row["Check-In"]),
-                cell_format,
+                cell_format
             )
 
             worksheet.write(
                 excel_row,
                 3,
                 str(row["Check-Out"]),
-                cell_format,
+                cell_format
             )
 
             worksheet.write(
                 excel_row,
                 4,
                 str(row["Source"]),
-                cell_format,
+                cell_format
             )
 
             worksheet.write(
                 excel_row,
                 5,
                 str(row["Status"]),
-                cell_format,
+                cell_format
             )
 
         # ====================================================
         # WIDTHS
         # ====================================================
 
-        worksheet.set_column(
-            "A:A",
-            6,
-        )
-
-        worksheet.set_column(
-            "B:B",
-            31,
-        )
-
-        worksheet.set_column(
-            "C:D",
-            19,
-        )
-
-        worksheet.set_column(
-            "E:E",
-            23,
-        )
-
-        worksheet.set_column(
-            "F:F",
-            19,
-        )
+        worksheet.set_column("A:A", 6)
+        worksheet.set_column("B:B", 30)
+        worksheet.set_column("C:D", 19)
+        worksheet.set_column("E:E", 23)
+        worksheet.set_column("F:F", 18)
 
         # ====================================================
-        # SETTINGS
+        # VIEW
         # ====================================================
 
-        worksheet.freeze_panes(
-            3,
-            0,
-        )
+        worksheet.freeze_panes(3, 0)
 
-        worksheet.hide_gridlines(
-            2,
-        )
+        worksheet.hide_gridlines(2)
+
+        # Explicitly LTR / normal Excel direction.
+        # DO NOT call worksheet.right_to_left()
 
     buffer.seek(0)
 
@@ -1546,7 +1438,7 @@ def create_daily_excel(
 
 
 # ============================================================
-# 13. WORD REPORT
+# 12. WORD REPORT
 # ============================================================
 
 def create_word_doc(df):
@@ -1555,34 +1447,17 @@ def create_word_doc(df):
 
     section = doc.sections[0]
 
-    # ========================================================
-    # PAGE MARGINS
-    # ========================================================
-
-    section.top_margin = Inches(0.55)
-    section.bottom_margin = Inches(0.55)
-    section.left_margin = Inches(0.65)
-    section.right_margin = Inches(0.65)
-
-    # ========================================================
-    # HEADER
-    # ========================================================
-
     header = section.header
 
     htable = header.add_table(
         1,
         3,
-        width=Inches(6.7),
+        width=Inches(6.5)
     )
 
-    htable.alignment = (
-        WD_TABLE_ALIGNMENT.CENTER
-    )
-
-    # --------------------------------------------------------
-    # ARABIC
-    # --------------------------------------------------------
+    # ========================================================
+    # ARABIC HEADER
+    # ========================================================
 
     arabic = (
         htable.rows[0]
@@ -1596,18 +1471,13 @@ def create_word_doc(df):
         "شعبة الموارد البشرية"
     )
 
-    arabic.alignment = (
-        WD_ALIGN_PARAGRAPH.RIGHT
-    )
+    arabic.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
     set_rtl(arabic)
 
-    for run in arabic.runs:
-        run.font.size = Pt(9)
-
-    # --------------------------------------------------------
+    # ========================================================
     # LOGO
-    # --------------------------------------------------------
+    # ========================================================
 
     logo_cell = (
         htable.rows[0]
@@ -1615,44 +1485,43 @@ def create_word_doc(df):
         .paragraphs[0]
     )
 
-    logo_cell.alignment = (
-        WD_ALIGN_PARAGRAPH.CENTER
-    )
+    logo_cell.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    logo_bytes = get_logo_bytes()
+    logo_path = get_logo_path()
 
-    if logo_bytes:
+    if logo_path:
 
         try:
 
-            logo_stream = BytesIO(
-                logo_bytes
-            )
+            with open(
+                logo_path,
+                "rb"
+            ) as logo_file:
+
+                logo_stream = BytesIO(
+                    logo_file.read()
+                )
 
             logo_cell.add_run().add_picture(
                 logo_stream,
-                width=Inches(0.72),
+                width=Inches(0.85)
             )
 
         except Exception:
 
-            run = logo_cell.add_run(
+            logo_cell.add_run(
                 "ALTURATH"
             )
 
-            run.font.size = Pt(8)
-
     else:
 
-        run = logo_cell.add_run(
+        logo_cell.add_run(
             "ALTURATH"
         )
 
-        run.font.size = Pt(8)
-
-    # --------------------------------------------------------
-    # ENGLISH
-    # --------------------------------------------------------
+    # ========================================================
+    # ENGLISH HEADER
+    # ========================================================
 
     english = (
         htable.rows[0]
@@ -1662,57 +1531,11 @@ def create_word_doc(df):
 
     english.text = (
         "University Of Alturath\n"
-        "Administrative & Financial Affairs\n"
-        "Human Resources"
+        "Dept. Of Admin & Financial Affairs\n"
+        "HR Department"
     )
 
-    english.alignment = (
-        WD_ALIGN_PARAGRAPH.LEFT
-    )
-
-    for run in english.runs:
-        run.font.size = Pt(7)
-
-    # ========================================================
-    # TITLE
-    # ========================================================
-
-    title = doc.add_paragraph()
-
-    title.alignment = (
-        WD_ALIGN_PARAGRAPH.CENTER
-    )
-
-    run = title.add_run(
-        "تقرير استثناءات الحضور والانصراف"
-    )
-
-    run.bold = True
-    run.font.size = Pt(14)
-    run.font.color.rgb = RGBColor(
-        15,
-        23,
-        42,
-    )
-
-    set_rtl(title)
-
-    subtitle = doc.add_paragraph()
-
-    subtitle.alignment = (
-        WD_ALIGN_PARAGRAPH.CENTER
-    )
-
-    run = subtitle.add_run(
-        "HR ATTENDANCE EXCEPTIONS REPORT"
-    )
-
-    run.font.size = Pt(7)
-    run.font.color.rgb = RGBColor(
-        100,
-        116,
-        139,
-    )
+    english.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     # ========================================================
     # SEPARATOR
@@ -1721,41 +1544,33 @@ def create_word_doc(df):
     p_line = doc.add_paragraph()
 
     line = p_line.add_run(
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        "______________________________________________________________________"
     )
 
-    line.font.size = Pt(8)
     line.font.color.rgb = RGBColor(
-        37,
-        99,
-        235,
+        0x8F,
+        0x0B,
+        0x0B
     )
 
-    p_line.alignment = (
-        WD_ALIGN_PARAGRAPH.CENTER
-    )
+    p_line.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # ========================================================
     # BODY
     # ========================================================
 
-    body = doc.add_paragraph()
-
-    body.alignment = (
-        WD_ALIGN_PARAGRAPH.RIGHT
+    body = doc.add_paragraph(
+        "\nنرفق لسيادتكم في ادناه الكشف الخاص "
+        "بموقف الحضور والغياب لكادر العمل الخاص "
+        "بجامعة التراث وحسب كشف البصمة المرفق "
+        "طيا نسخة منه ... راجين التفضل بالاطلاع "
+        "واعلامنا توجيهات سيادتكم حول ذلك ... "
+        "مع التقدير.."
     )
+
+    body.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
     set_rtl(body)
-
-    body_run = body.add_run(
-        "نرفق لسيادتكم أدناه الكشف الخاص "
-        "بموقف الحضور والغياب لكادر العمل "
-        "في جامعة التراث، وحسب سجلات البصمة "
-        "المعتمدة، راجين التفضل بالاطلاع "
-        "واتخاذ ما ترونه مناسباً."
-    )
-
-    body_run.font.size = Pt(10)
 
     # ========================================================
     # TABLE
@@ -1763,13 +1578,10 @@ def create_word_doc(df):
 
     table = doc.add_table(
         rows=1,
-        cols=5,
+        cols=5
     )
 
     table.style = "Table Grid"
-    table.alignment = (
-        WD_TABLE_ALIGNMENT.CENTER
-    )
 
     set_table_rtl(table)
 
@@ -1778,29 +1590,22 @@ def create_word_doc(df):
         "الاسم",
         "الحالة",
         "العدد",
-        "التواريخ",
+        "التواريخ"
     ]
 
     for i, text_value in enumerate(headers):
 
-        cell = (
-            table.rows[0]
-            .cells[i]
+        cell = table.rows[0].cells[i]
+
+        cell.text = text_value
+
+        paragraph = cell.paragraphs[0]
+
+        paragraph.alignment = (
+            WD_ALIGN_PARAGRAPH.CENTER
         )
 
-        set_cell_text(
-            cell,
-            text_value,
-            bold=True,
-            size=8,
-            color="FFFFFF",
-            rtl=True,
-        )
-
-        shade_cell(
-            cell,
-            "0F2A4A",
-        )
+        set_rtl(paragraph)
 
     # ========================================================
     # ROWS
@@ -1808,21 +1613,12 @@ def create_word_doc(df):
 
     for idx, row in df.iterrows():
 
-        cells = (
-            table.add_row()
-            .cells
-        )
+        cells = table.add_row().cells
 
-        set_cell_text(
-            cells[0],
-            idx + 1,
-            size=8,
-        )
+        cells[0].text = str(idx + 1)
 
-        set_cell_text(
-            cells[1],
-            row["Name"],
-            size=8,
+        cells[1].text = str(
+            row["Name"]
         )
 
         status_text = str(
@@ -1830,52 +1626,52 @@ def create_word_doc(df):
         )
 
         if "Late" in status_text:
-            arabic_status = "تأخير"
+
+            cells[2].text = "تأخير"
+
         else:
-            arabic_status = "غياب"
 
-        set_cell_text(
-            cells[2],
-            arabic_status,
-            size=8,
+            cells[2].text = "غياب"
+
+        cells[3].text = str(
+            row["Count"]
         )
 
-        set_cell_text(
-            cells[3],
-            row["Count"],
-            size=8,
+        d_para = (
+            cells[4]
+            .paragraphs[0]
         )
 
-        set_cell_text(
-            cells[4],
-            row["Dates_Str"],
-            size=7,
+        d_para.text = str(
+            row["Dates_Str"]
         )
+
+        d_para.runs[0].font.size = Pt(8)
+
+        for cell in cells:
+
+            cell.paragraphs[0].alignment = (
+                WD_ALIGN_PARAGRAPH.CENTER
+            )
+
+            set_rtl(
+                cell.paragraphs[0]
+            )
 
     # ========================================================
     # SIGNATURE
     # ========================================================
 
-    doc.add_paragraph()
+    doc.add_paragraph("\n\n")
 
-    signature = doc.add_paragraph()
-
-    signature.alignment = (
-        WD_ALIGN_PARAGRAPH.LEFT
+    signature = doc.add_paragraph(
+        "م.م محمد زهير طالب النقيب\n"
+        "مدير قسم الشؤون الادارية والموارد البشرية"
     )
+
+    signature.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     set_rtl(signature)
-
-    run = signature.add_run(
-        "م.م محمد زهير طالب النقيب\n"
-        "مدير قسم الشؤون الإدارية والموارد البشرية"
-    )
-
-    run.font.size = Pt(9)
-
-    # ========================================================
-    # SAVE
-    # ========================================================
 
     buffer = BytesIO()
 
@@ -1887,127 +1683,91 @@ def create_word_doc(df):
 
 
 # ============================================================
-# 14. HERO
+# 13. HERO
 # ============================================================
 
-def show_daily_hero():
+def daily_hero():
 
-    render_html(
+    st.markdown(
         """
-        <div class="hero-card">
-            <div class="hero-content">
+<div class="hero-card">
 
-                <div class="hero-kicker">
-                    ALTURATH UNIVERSITY • HUMAN RESOURCES
-                </div>
+    <div class="hero-kicker">
+        ALTURATH UNIVERSITY • HUMAN RESOURCES
+    </div>
 
-                <div class="hero-title">
-                    Daily Biometric Attendance
-                </div>
+    <div class="hero-title">
+        Daily Biometric Attendance
+    </div>
 
-                <div class="hero-arabic">
-                    سجل الحضور اليومي — قسم الموارد البشرية
-                </div>
+    <div class="hero-text">
+        سجل الحضور اليومي للموارد البشرية —
+        دخول اليوم وخروج اليوم السابق وفق آلية
+        التسليم المعتمدة لدى قسم الموارد البشرية.
+    </div>
 
-                <div class="hero-description">
-                    Current-day check-in and previous-day
-                    check-out prepared for HR submission.
-                </div>
-
-            </div>
-        </div>
-        """
+</div>
+        """,
+        unsafe_allow_html=True
     )
 
 
-def show_exceptions_hero():
+def exceptions_hero():
 
-    render_html(
+    st.markdown(
         """
-        <div class="hero-card">
-            <div class="hero-content">
+<div class="hero-card">
 
-                <div class="hero-kicker">
-                    ALTURATH UNIVERSITY • HUMAN RESOURCES
-                </div>
+    <div class="hero-kicker">
+        ALTURATH UNIVERSITY • HUMAN RESOURCES
+    </div>
 
-                <div class="hero-title">
-                    Multi-Day Exceptions
-                </div>
+    <div class="hero-title">
+        Multi-Day Attendance Audit
+    </div>
 
-                <div class="hero-arabic">
-                    تقرير الاستثناءات متعددة الأيام
-                </div>
+    <div class="hero-text">
+        مراجعة حالات التأخير والغياب عبر تقارير
+        الحضور اليومية.
+    </div>
 
-                <div class="hero-description">
-                    Review late arrivals and absences across
-                    multiple HR attendance exports.
-                </div>
-
-            </div>
-        </div>
-        """
+</div>
+        """,
+        unsafe_allow_html=True
     )
 
 
 # ============================================================
-# 15. SECTION HEADER
-# ============================================================
-
-def section_header(
-    arabic_title,
-    english_title,
-):
-    render_html(
-        f"""
-        <div class="section-heading">
-            <div class="section-line"></div>
-            <div class="section-text">
-                {arabic_title}
-            </div>
-            <div class="section-en">
-                {english_title}
-            </div>
-        </div>
-        """
-    )
-
-
-# ============================================================
-# 16. DAILY REPORT MODULE
+# 14. DAILY REPORT
 # ============================================================
 
 def run_daily_report_module():
 
-    show_daily_hero()
+    show_top_brand()
+
+    daily_hero()
 
     show_sidebar_brand()
 
     # ========================================================
-    # SIDEBAR SETTINGS
+    # DATE
     # ========================================================
-
-    render_html(
-        """
-        <div class="sidebar-section">
-            Report Settings
-        </div>
-        """
-    )
 
     use_today = st.sidebar.toggle(
         "Use Today",
-        value=False,
+        value=True
     )
 
-    target_date = (
-        date.today()
-        if use_today
-        else st.sidebar.date_input(
+    if use_today:
+
+        target_date = date.today()
+
+    else:
+
+        target_date = st.sidebar.date_input(
             "Submission Date",
-            value=date.today(),
+            value=date.today()
         )
-    )
 
     weekdays_ar = {
         "Monday": "الاثنين",
@@ -2016,12 +1776,12 @@ def run_daily_report_module():
         "Thursday": "الخميس",
         "Friday": "الجمعة",
         "Saturday": "السبت",
-        "Sunday": "الأحد",
+        "Sunday": "الأحد"
     }
 
     current_weekday_ar = weekdays_ar.get(
         target_date.strftime("%A"),
-        "",
+        ""
     )
 
     previous_date = (
@@ -2034,109 +1794,64 @@ def run_daily_report_module():
     # DATE CARD
     # ========================================================
 
-    col1, col2 = st.columns(
-        [3.3, 1.2]
+    st.markdown(
+        f"""
+<div class="date-card">
+
+    <div>
+        <div class="date-main">
+            {target_date.strftime('%A, %d %B %Y')}
+        </div>
+
+        <div class="date-sub">
+            {current_weekday_ar}
+        </div>
+    </div>
+
+    <div class="checkout-pill">
+        Check-Out:
+        {previous_date.strftime('%d %b %Y')}
+    </div>
+
+</div>
+        """,
+        unsafe_allow_html=True
     )
-
-    with col1:
-
-        render_html(
-            f"""
-            <div class="date-card">
-
-                <div class="date-label">
-                    HR SUBMISSION DATE
-                </div>
-
-                <div class="date-main">
-                    {target_date.strftime('%A, %d %B %Y')}
-                </div>
-
-                <div class="date-ar">
-                    {current_weekday_ar}
-                </div>
-
-            </div>
-            """
-        )
-
-    with col2:
-
-        render_html(
-            f"""
-            <div class="date-card">
-
-                <div class="date-pill">
-                    Check-Out
-                    {previous_date.strftime('%d %b %Y')}
-                </div>
-
-                <div class="date-pill-small">
-                    previous working date source
-                </div>
-
-            </div>
-            """
-        )
 
     # ========================================================
     # SIDEBAR FILES
     # ========================================================
 
-    render_html(
-        """
-        <div class="sidebar-section">
-            Attendance Sources
-        </div>
-        """
-    )
+    st.sidebar.markdown("### Attendance Sources")
 
     f_zaqura = st.sidebar.file_uploader(
         "Zaqura Gate",
-        type=[
-            "xlsx",
-            "xls",
-        ],
-        key="zaqura",
+        type=["xlsx", "xls"],
+        key="zaqura"
     )
 
     f_mhmd = st.sidebar.file_uploader(
         "Mhmd Bn Ali Gate",
-        type=[
-            "xlsx",
-            "xls",
-        ],
-        key="mhmd",
+        type=["xlsx", "xls"],
+        key="mhmd"
     )
 
     f_app = st.sidebar.file_uploader(
         "Mawjood App",
-        type=[
-            "xlsx",
-            "xls",
-        ],
-        key="maw",
+        type=["xlsx", "xls"],
+        key="maw"
     )
 
-    render_html(
-        """
-        <div class="sidebar-section">
-            HR Data
-        </div>
-        """
-    )
+    st.sidebar.markdown("### HR Data")
 
     f_weekly = st.sidebar.file_uploader(
         "Weekly Day-Off List",
-        type=[
-            "xlsx",
-            "xls",
-        ],
-        key="weekly",
+        type=["xlsx", "xls"],
+        key="weekly"
     )
 
     # ========================================================
-    # PROCESS GATES
+    # PROCESS LOGS
     # ========================================================
 
     all_logs = []
@@ -2145,7 +1860,7 @@ def run_daily_report_module():
 
         data = process_gate(
             f_zaqura,
-            "Zaqura Gate",
+            "Zaqura Gate"
         )
 
         if not data.empty:
@@ -2155,21 +1870,15 @@ def run_daily_report_module():
 
         data = process_gate(
             f_mhmd,
-            "Mhmd Bn Ali Gate",
+            "Mhmd Bn Ali Gate"
         )
 
         if not data.empty:
             all_logs.append(data)
 
-    # ========================================================
-    # PROCESS APP
-    # ========================================================
-
     if f_app:
 
-        data = process_app(
-            f_app
-        )
+        data = process_app(f_app)
 
         if not data.empty:
             all_logs.append(data)
@@ -2181,7 +1890,7 @@ def run_daily_report_module():
     df_off = pd.DataFrame(
         columns=[
             "Name",
-            "OffDay",
+            "OffDay"
         ]
     )
 
@@ -2193,22 +1902,11 @@ def run_daily_report_module():
                 f_weekly
             )
 
-            df_off.columns = [
-                str(c).strip()
-                for c in df_off.columns
-            ]
-
-            rename_map = {
-                "الاسم الثلاثي": "Name",
-                "الاسم": "Name",
-                "الإسم": "Name",
-                "الاجازة الاسبوعية": "OffDay",
-                "الإجازة الاسبوعية": "OffDay",
-                "يوم العطلة": "OffDay",
-            }
-
             df_off = df_off.rename(
-                columns=rename_map
+                columns={
+                    "الاسم الثلاثي": "Name",
+                    "الاجازة الاسبوعية": "OffDay"
+                }
             )
 
             if "Name" in df_off.columns:
@@ -2234,36 +1932,36 @@ def run_daily_report_module():
             )
 
     # ========================================================
-    # EMPTY STATE
+    # NOTHING UPLOADED
     # ========================================================
 
     if not all_logs and not f_weekly:
 
-        render_html(
+        st.markdown(
             """
-            <div class="info-card">
+<div class="info-card">
 
-                <strong>Ready for HR submission.</strong><br>
+<strong>Ready for attendance data.</strong><br>
 
-                Upload the biometric gate files
-                from the left panel to generate
-                the daily attendance register.
+Upload the biometric gate files from the
+sidebar to generate the HR submission report.
 
-            </div>
-            """
+</div>
+            """,
+            unsafe_allow_html=True
         )
 
         return
 
     # ========================================================
-    # COMBINE LOGS
+    # LOG DATA
     # ========================================================
 
     if all_logs:
 
         df_logs = pd.concat(
             all_logs,
-            ignore_index=True,
+            ignore_index=True
         )
 
     else:
@@ -2275,19 +1973,19 @@ def run_daily_report_module():
                 "Date",
                 "Time",
                 "Event_Type",
-                "Source",
+                "Source"
             ]
         )
 
     # ========================================================
-    # BUILD FINAL
+    # BUILD
     # ========================================================
 
     df_final = build_daily_attendance(
         df_logs,
         target_date,
         current_weekday_ar,
-        df_off,
+        df_off
     )
 
     if df_final.empty:
@@ -2315,7 +2013,7 @@ def run_daily_report_module():
             df_final["Status"]
             .str.contains(
                 "On Time",
-                na=False,
+                na=False
             )
         ]
     )
@@ -2325,7 +2023,7 @@ def run_daily_report_module():
             df_final["Status"]
             .str.contains(
                 "Late",
-                na=False,
+                na=False
             )
         ]
     )
@@ -2335,7 +2033,7 @@ def run_daily_report_module():
             df_final["Status"]
             .str.contains(
                 "Absence",
-                na=False,
+                na=False
             )
         ]
     )
@@ -2346,93 +2044,66 @@ def run_daily_report_module():
         ]
     )
 
-    weekly_off_count = len(
-        df_final[
-            df_final["Status"]
-            .str.contains(
-                "Weekly Off",
-                na=False,
-            )
-        ]
+    c1, c2, c3, c4, c5 = st.columns(
+        5,
+        gap="small"
     )
-
-    c1, c2, c3, c4, c5 = st.columns(5)
 
     with c1:
-        st.metric(
-            "Employees",
-            total,
-        )
+        st.metric("Employees", total)
 
     with c2:
-        st.metric(
-            "On Time",
-            on_time,
-        )
+        st.metric("On Time", on_time)
 
     with c3:
-        st.metric(
-            "Late",
-            late,
-        )
+        st.metric("Late", late)
 
     with c4:
-        st.metric(
-            "Absence",
-            absent,
-        )
+        st.metric("Absence", absent)
 
     with c5:
-        st.metric(
-            "Check-Outs",
-            checkout_count,
-        )
+        st.metric("Check-Outs", checkout_count)
 
     # ========================================================
-    # HR RULE INFO
+    # LOGIC NOTE
     # ========================================================
 
-    render_html(
+    st.markdown(
         f"""
-        <div class="info-card">
+<div class="info-card">
 
-            <strong>HR submission rule:</strong>
+<strong>HR Submission Logic</strong><br>
 
-            Check-In →
-            <strong>{target_date.strftime('%d %b %Y')}</strong>
+Check-In → <strong>{target_date.strftime('%d %b %Y')}</strong>
+&nbsp;&nbsp; | &nbsp;&nbsp;
 
-            &nbsp;&nbsp;•&nbsp;&nbsp;
+Check-Out → <strong>{previous_date.strftime('%d %b %Y')}</strong>
+<br>
 
-            Check-Out →
-            <strong>{previous_date.strftime('%d %b %Y')}</strong>
+<strong>دخول(1)</strong> = Check-In
+&nbsp;&nbsp; • &nbsp;&nbsp;
 
-            <br>
+<strong>خروج(2)</strong> before 12:00 = Check-In
+&nbsp;&nbsp; • &nbsp;&nbsp;
 
-            <strong>دخول(1)</strong> = Check-In
-            &nbsp; • &nbsp;
+<strong>خروج(2)</strong> at/after 12:00 = Check-Out
 
-            <strong>خروج(2)</strong> before 12:00 = Check-In
-            &nbsp; • &nbsp;
-
-            <strong>خروج(2)</strong> at/after 12:00 = Check-Out
-
-            <br>
-
-            First valid Check-In is used for today.
-            Last valid Check-Out is used from yesterday.
-            Today's Check-Out is never used for today's HR report.
-
-        </div>
-        """
+</div>
+        """,
+        unsafe_allow_html=True
     )
 
     # ========================================================
-    # ATTENDANCE TABLE
+    # TABLE
     # ========================================================
 
-    section_header(
-        "سجل الحضور",
-        "ATTENDANCE REGISTER",
+    st.markdown(
+        """
+<div class="section-heading">
+    Attendance Register
+</div>
+        """,
+        unsafe_allow_html=True
     )
 
     display_df = df_final.copy()
@@ -2442,26 +2113,17 @@ def run_daily_report_module():
         "No.",
         range(
             1,
-            len(display_df) + 1,
-        ),
+            len(display_df) + 1
+        )
     )
 
     display_df = display_df.rename(
         columns={
-            "Name":
-                "الاسم",
-
             "Check-In":
-                f"الحضور ({target_date.strftime('%d %b')})",
+                f"Check-In ({target_date.strftime('%d %b')})",
 
             "Check-Out":
-                f"الانصراف ({previous_date.strftime('%d %b')})",
-
-            "Source":
-                "المصدر",
-
-            "Status":
-                "الحالة",
+                f"Check-Out ({previous_date.strftime('%d %b')})"
         }
     )
 
@@ -2469,50 +2131,73 @@ def run_daily_report_module():
         display_df,
         use_container_width=True,
         hide_index=True,
+        height=min(
+            600,
+            max(
+                260,
+                55 + len(display_df) * 35
+            )
+        )
     )
 
     # ========================================================
     # EXPORT
     # ========================================================
 
-    section_header(
-        "تصدير التقرير",
-        "HR EXPORT",
+    st.markdown(
+        """
+<div class="section-heading">
+    HR Export
+</div>
+        """,
+        unsafe_allow_html=True
     )
 
     excel_file = create_daily_excel(
         df_final,
-        target_date,
+        target_date
     )
 
-    st.download_button(
-        label="Download HR Excel",
-        data=excel_file,
-        file_name=(
-            "HR_Attendance_"
-            f"{target_date.strftime('%Y-%m-%d')}"
-            ".xlsx"
-        ),
-        mime=(
-            "application/vnd.openxmlformats-officedocument."
-            "spreadsheetml.sheet"
-        ),
+    col1, col2 = st.columns(
+        [1, 3],
+        gap="small"
     )
 
-    st.caption(
-        "Compact LTR Excel • "
-        f"Check-In = {target_date.strftime('%d %b %Y')} • "
-        f"Check-Out = {previous_date.strftime('%d %b %Y')}"
-    )
+    with col1:
+
+        st.download_button(
+            label="Download HR Excel",
+            data=excel_file,
+            file_name=(
+                "HR_Attendance_"
+                f"{target_date.strftime('%Y-%m-%d')}"
+                ".xlsx"
+            ),
+            mime=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
+            use_container_width=True
+        )
+
+    with col2:
+
+        st.caption(
+            "LTR Excel • "
+            f"Check-In = {target_date.strftime('%d %b %Y')} • "
+            f"Check-Out = {previous_date.strftime('%d %b %Y')}"
+        )
 
 
 # ============================================================
-# 17. MULTI-DAY EXCEPTIONS MODULE
+# 15. MULTI-DAY EXCEPTIONS
 # ============================================================
 
 def run_exceptions_module():
 
-    show_exceptions_hero()
+    show_top_brand()
+
+    exceptions_hero()
 
     show_sidebar_brand()
 
@@ -2521,24 +2206,25 @@ def run_exceptions_module():
         accept_multiple_files=True,
         type=[
             "xlsx",
-            "xls",
-        ],
+            "xls"
+        ]
     )
 
     if not uploaded_files:
 
-        render_html(
+        st.markdown(
             """
-            <div class="info-card">
+<div class="info-card">
 
-                <strong>Multi-Day Audit</strong><br>
+<strong>Multi-Day Audit</strong><br>
 
-                Upload exported HR attendance Excel files.
-                The system will combine Late and Absence
-                records into a single exceptions report.
+Upload the daily HR Excel reports.
+The system will combine late and absence
+records into one audit report.
 
-            </div>
-            """
+</div>
+            """,
+            unsafe_allow_html=True
         )
 
         return
@@ -2562,7 +2248,7 @@ def run_exceptions_module():
             df = pd.read_excel(
                 file,
                 engine=engine,
-                header=2,
+                header=2
             )
 
             df.columns = [
@@ -2570,42 +2256,19 @@ def run_exceptions_module():
                 for c in df.columns
             ]
 
-            # ------------------------------------------------
-            # Support current English/Arabic Excel headers
-            # ------------------------------------------------
-
-            name_col = None
-            status_col = None
-
-            for col in [
-                "Name",
-                "الاسم",
-            ]:
-                if col in df.columns:
-                    name_col = col
-                    break
-
-            for col in [
-                "Status",
-                "الحالة",
-            ]:
-                if col in df.columns:
-                    status_col = col
-                    break
-
             if (
-                name_col
+                "Status" in df.columns
                 and
-                status_col
+                "Name" in df.columns
             ):
 
                 mask = (
-                    df[status_col]
+                    df["Status"]
                     .astype(str)
                     .str.contains(
-                        "Late|Absence|تأخير|غياب",
+                        "Late|Absence",
                         case=False,
-                        na=False,
+                        na=False
                     )
                 )
 
@@ -2613,28 +2276,14 @@ def run_exceptions_module():
                     mask
                 ].copy()
 
-                day_data[
-                    "Report_Date"
-                ] = file_date
-
-                day_data[
-                    "Name"
-                ] = day_data[
-                    name_col
-                ]
-
-                day_data[
-                    "Status"
-                ] = day_data[
-                    status_col
-                ]
+                day_data["Report_Date"] = file_date
 
                 all_data.append(
                     day_data[
                         [
                             "Name",
                             "Status",
-                            "Report_Date",
+                            "Report_Date"
                         ]
                     ]
                 )
@@ -2642,8 +2291,7 @@ def run_exceptions_module():
         except Exception as e:
 
             st.warning(
-                f"Could not process "
-                f"{file.name}: {e}"
+                f"Could not process {file.name}: {e}"
             )
 
     if not all_data:
@@ -2656,7 +2304,7 @@ def run_exceptions_module():
 
     combined = pd.concat(
         all_data,
-        ignore_index=True,
+        ignore_index=True
     )
 
     summary = (
@@ -2664,7 +2312,7 @@ def run_exceptions_module():
         .groupby(
             [
                 "Name",
-                "Status",
+                "Status"
             ]
         )["Report_Date"]
         .unique()
@@ -2682,54 +2330,37 @@ def run_exceptions_module():
             lambda x:
             ", ".join(
                 sorted(
-                    [str(v) for v in x]
+                    x
                 )
             )
         )
     )
 
-    # ========================================================
-    # DISPLAY
-    # ========================================================
-
-    section_header(
-        "الاستثناءات",
-        "EXCEPTIONS",
-    )
-
-    display_summary = summary.rename(
-        columns={
-            "Name": "الاسم",
-            "Status": "الحالة",
-            "Count": "العدد",
-            "Dates_Str": "التواريخ",
-        }
+    st.markdown(
+        """
+<div class="section-heading">
+    Exceptions
+</div>
+        """,
+        unsafe_allow_html=True
     )
 
     st.dataframe(
-        display_summary[
+        summary[
             [
-                "الاسم",
-                "الحالة",
-                "العدد",
-                "التواريخ",
+                "Name",
+                "Status",
+                "Count",
+                "Dates_Str"
             ]
         ],
         use_container_width=True,
-        hide_index=True,
-    )
-
-    # ========================================================
-    # WORD REPORT
-    # ========================================================
-
-    section_header(
-        "التقرير الرسمي",
-        "OFFICIAL WORD REPORT",
+        hide_index=True
     )
 
     if st.button(
-        "Generate Official Word Report"
+        "Generate Official Word Report",
+        use_container_width=True
     ):
 
         report_file = create_word_doc(
@@ -2746,35 +2377,30 @@ def run_exceptions_module():
                 "application/vnd.openxmlformats-officedocument."
                 "wordprocessingml.document"
             ),
+            use_container_width=True
         )
 
 
 # ============================================================
-# 18. SIDEBAR NAVIGATION
+# 16. SIDEBAR NAVIGATION
 # ============================================================
 
-show_sidebar_brand()
-
-render_html(
-    """
-    <div class="sidebar-section">
-        System Module
-    </div>
-    """
+st.sidebar.markdown(
+    "### System Module"
 )
 
 app_mode = st.sidebar.selectbox(
     "System Module",
     [
         "Daily Report Tool",
-        "Multi-Day Audit Tool",
+        "Multi-Day Audit Tool"
     ],
-    label_visibility="collapsed",
+    label_visibility="collapsed"
 )
 
 
 # ============================================================
-# 19. RUN
+# 17. RUN
 # ============================================================
 
 if app_mode == "Daily Report Tool":
@@ -2787,15 +2413,14 @@ else:
 
 
 # ============================================================
-# 20. FOOTER
+# 18. FOOTER
 # ============================================================
 
-render_html(
+st.markdown(
     """
-    <div class="footer">
-        ALTURATH HR BIOMETRICS SYSTEM • V2
-        &nbsp;•&nbsp;
-        HUMAN RESOURCES
-    </div>
-    """
+<div class="footer">
+    ALTURATH HR BIOMETRICS SYSTEM • V2
+</div>
+    """,
+    unsafe_allow_html=True
 )
