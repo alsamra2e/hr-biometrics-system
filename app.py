@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
-import requests
+import os
 
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
@@ -12,11 +12,9 @@ from docx.oxml import OxmlElement
 from io import BytesIO
 from datetime import date, time, timedelta
 
-
 # ============================================================
 # ALTURATH HR BIOMETRICS SYSTEM V2
 # ============================================================
-
 
 # ============================================================
 # 1. PAGE CONFIG
@@ -29,19 +27,20 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-
 # ============================================================
-# 2. CONSTANTS
+# 2. CONSTANTS / LOCAL BRANDING
 # ============================================================
-
-LOGO_URL = (
-    "https://uoturath.edu.iq/"
-    "wp-content/uploads/2025/03/"
-    "shield-1.png"
-)
 
 UNIVERSITY_NAME = "University Of Alturath"
 
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
+
+LOGO_PATH = os.path.join(
+    BASE_DIR,
+    "logo(1).png"
+)
 
 # ============================================================
 # 3. FUTURISTIC MINIMAL THEME
@@ -57,142 +56,154 @@ def apply_v2_theme():
             'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
         );
 
+        /* ====================================================
+           GLOBAL
+        ==================================================== */
+
         html, body, [class*="css"] {
             font-family: 'Inter', sans-serif;
         }
 
         .stApp {
-            background:
-                radial-gradient(
-                    circle at 85% 0%,
-                    rgba(37,99,235,0.08),
-                    transparent 30%
-                ),
-                radial-gradient(
-                    circle at 0% 100%,
-                    rgba(14,165,233,0.05),
-                    transparent 25%
-                ),
-                #f7f8fa;
+            background: #f4f7fb;
+            color: #0f172a;
         }
 
-        /* ================= SIDEBAR ================= */
+        .main .block-container {
+            max-width: 1500px;
+            padding-top: 1.8rem;
+            padding-bottom: 2rem;
+        }
+
+        /* ====================================================
+           SIDEBAR
+        ==================================================== */
 
         section[data-testid="stSidebar"] {
-            background: #08111f;
-            border-right: 1px solid #1e293b;
+            background: #07111f;
+            border-right: 1px solid #172338;
+        }
+
+        section[data-testid="stSidebar"] > div {
+            padding-top: 1.2rem;
         }
 
         section[data-testid="stSidebar"] * {
-            color: #e2e8f0;
+            color: #dbe7f5;
         }
 
         section[data-testid="stSidebar"] .stSelectbox label,
         section[data-testid="stSidebar"] .stFileUploader label,
         section[data-testid="stSidebar"] .stDateInput label {
-            color: #94a3b8 !important;
+            color: #8ea3bd !important;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .2px;
+        }
+
+        section[data-testid="stSidebar"] .stToggle label {
+            color: #dbe7f5 !important;
             font-size: 12px;
             font-weight: 600;
         }
 
-        /* ================= BRAND ================= */
+        /* ====================================================
+           BRAND
+        ==================================================== */
 
         .brand {
-            padding: 4px 4px 25px 4px;
+            padding: 4px 5px 28px 5px;
         }
 
         .brand-logo {
-            width: 58px;
-            height: 58px;
+            width: 62px;
+            height: 62px;
             object-fit: contain;
-            background: white;
-            border-radius: 14px;
-            padding: 7px;
-            margin-bottom: 12px;
+            background: #ffffff;
+            border-radius: 15px;
+            padding: 6px;
+            margin-bottom: 13px;
+
             box-shadow:
-                0 10px 30px rgba(37,99,235,0.20);
-        }
-
-        .brand-mark {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #2563eb,
-                    #06b6d4
-                );
-
-            color: white;
-            font-size: 20px;
-            font-weight: 800;
-
-            margin-bottom: 12px;
+                0 8px 24px rgba(0,0,0,.25);
         }
 
         .brand-name {
             color: #f8fafc;
-            font-size: 18px;
+            font-size: 19px;
             font-weight: 800;
-            letter-spacing: -0.4px;
+            letter-spacing: -.5px;
         }
 
         .brand-sub {
-            color: #64748b;
-            font-size: 10px;
-            margin-top: 4px;
-            letter-spacing: 0.5px;
+            color: #6f86a1;
+            font-size: 9px;
+            margin-top: 5px;
+            letter-spacing: 1.1px;
+            font-weight: 600;
         }
 
-        /* ================= HERO ================= */
+        /* ====================================================
+           SIDEBAR HEADINGS
+        ==================================================== */
+
+        section[data-testid="stSidebar"] h3 {
+            color: #e8f0fa;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            margin-top: 22px;
+            margin-bottom: 9px;
+        }
+
+        /* ====================================================
+           HERO
+        ==================================================== */
 
         .hero {
             position: relative;
             overflow: hidden;
 
-            background: #0f172a;
+            background:
+                linear-gradient(
+                    135deg,
+                    #081525 0%,
+                    #0d1c31 100%
+                );
 
-            border: 1px solid #1e293b;
-            border-radius: 20px;
+            border: 1px solid #1b2d46;
+            border-radius: 18px;
 
-            padding: 27px 30px;
-            margin-bottom: 20px;
+            padding: 26px 29px;
+            margin-bottom: 18px;
 
             box-shadow:
-                0 15px 40px rgba(15,23,42,0.08);
+                0 12px 30px rgba(15,23,42,.08);
         }
 
-        .hero:after {
+        .hero:before {
             content: "";
 
             position: absolute;
+            right: 28px;
+            top: 25px;
 
-            width: 280px;
-            height: 280px;
-
-            right: -100px;
-            top: -150px;
+            width: 7px;
+            height: 7px;
 
             border-radius: 50%;
 
-            background:
-                radial-gradient(
-                    circle,
-                    rgba(37,99,235,0.38),
-                    transparent 68%
-                );
+            background: #38bdf8;
+
+            box-shadow:
+                0 0 0 6px rgba(56,189,248,.08),
+                0 0 24px rgba(56,189,248,.35);
         }
 
         .hero-label {
-            color: #60a5fa;
-            font-size: 10px;
-            font-weight: 700;
+            color: #38bdf8;
+            font-size: 9px;
+            font-weight: 800;
             letter-spacing: 2px;
             text-transform: uppercase;
             margin-bottom: 7px;
@@ -200,19 +211,23 @@ def apply_v2_theme():
 
         .hero-title {
             color: #f8fafc;
-            font-size: 30px;
+            font-size: 28px;
             font-weight: 800;
-            letter-spacing: -1px;
+            letter-spacing: -.8px;
             margin: 0;
         }
 
         .hero-description {
-            color: #94a3b8;
-            font-size: 13px;
+            color: #91a4bb;
+            font-size: 12px;
             margin-top: 7px;
+            max-width: 760px;
+            line-height: 1.6;
         }
 
-        /* ================= DATE BAR ================= */
+        /* ====================================================
+           DATE BAR
+        ==================================================== */
 
         .date-bar {
             display: flex;
@@ -221,149 +236,290 @@ def apply_v2_theme():
 
             background: #ffffff;
 
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
+            border: 1px solid #dce5ef;
+            border-radius: 13px;
 
-            padding: 13px 17px;
+            padding: 12px 16px;
 
-            margin-bottom: 18px;
+            margin-bottom: 17px;
 
             box-shadow:
-                0 5px 18px rgba(15,23,42,0.04);
+                0 4px 16px rgba(15,23,42,.035);
         }
 
         .date-main {
             color: #0f172a;
-            font-size: 14px;
-            font-weight: 700;
+            font-size: 13px;
+            font-weight: 800;
         }
 
         .date-sub {
-            color: #64748b;
-            font-size: 11px;
+            color: #718198;
+            font-size: 10px;
             margin-top: 3px;
         }
 
         .checkout-badge {
-            background: #eff6ff;
-            color: #2563eb;
+            background: #f0f7ff;
+            color: #1769c2;
 
-            border: 1px solid #dbeafe;
+            border: 1px solid #d7eaff;
 
             padding: 6px 11px;
             border-radius: 999px;
 
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
         }
 
-        /* ================= METRICS ================= */
+        /* ====================================================
+           METRICS
+        ==================================================== */
 
         div[data-testid="stMetric"] {
             background: #ffffff;
 
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
+            border: 1px solid #dce5ef;
+            border-radius: 13px;
 
-            padding: 12px 15px;
+            padding: 12px 14px;
 
             box-shadow:
-                0 5px 18px rgba(15,23,42,0.035);
+                0 4px 16px rgba(15,23,42,.035);
         }
 
         div[data-testid="stMetricLabel"] {
-            color: #64748b;
-            font-size: 11px;
+            color: #718198;
+            font-size: 10px;
+            font-weight: 600;
         }
 
         div[data-testid="stMetricValue"] {
             color: #0f172a;
+            font-size: 22px;
             font-weight: 800;
         }
 
-        /* ================= BUTTONS ================= */
+        /* ====================================================
+           BUTTONS
+        ==================================================== */
 
         .stButton > button,
         .stDownloadButton > button {
 
             border-radius: 9px;
 
-            border: 1px solid #2563eb;
+            border: 1px solid #1769e0;
 
-            background: #2563eb;
+            background: #1769e0;
 
             color: white;
 
             font-weight: 700;
 
-            transition: all 0.18s ease;
+            min-height: 40px;
+
+            box-shadow:
+                0 4px 12px rgba(23,105,224,.12);
+
+            transition:
+                background .15s ease,
+                box-shadow .15s ease,
+                transform .15s ease;
         }
 
         .stButton > button:hover,
         .stDownloadButton > button:hover {
 
-            background: #1d4ed8;
+            background: #1258bd;
 
-            border-color: #1d4ed8;
+            border-color: #1258bd;
 
             transform: translateY(-1px);
 
             box-shadow:
-                0 7px 18px rgba(37,99,235,0.18);
+                0 7px 18px rgba(23,105,224,.18);
         }
 
-        /* ================= DATAFRAME ================= */
+        /* ====================================================
+           FILE UPLOADER
+        ==================================================== */
+
+        section[data-testid="stSidebar"]
+        [data-testid="stFileUploader"] {
+
+            background: #0c1829;
+
+            border: 1px solid #1d3049;
+
+            border-radius: 10px;
+
+            padding: 5px;
+
+            margin-bottom: 7px;
+        }
+
+        section[data-testid="stSidebar"]
+        [data-testid="stFileUploaderDropzone"] {
+
+            background: #0b1727;
+
+            border: 1px dashed #29415e;
+
+            border-radius: 8px;
+        }
+
+        section[data-testid="stSidebar"]
+        [data-testid="stFileUploaderDropzoneInstructions"] {
+
+            color: #91a4bb;
+        }
+
+        /* ====================================================
+           INPUTS
+        ==================================================== */
+
+        .stSelectbox > div > div,
+        .stDateInput > div > div {
+
+            border-radius: 9px !important;
+        }
+
+        /* ====================================================
+           DATAFRAME
+        ==================================================== */
 
         div[data-testid="stDataFrame"] {
 
-            border: 1px solid #e2e8f0;
+            border: 1px solid #dce5ef;
 
-            border-radius: 14px;
+            border-radius: 13px;
 
             overflow: hidden;
 
             box-shadow:
-                0 7px 25px rgba(15,23,42,0.05);
+                0 5px 20px rgba(15,23,42,.045);
         }
 
-        /* ================= SECTION ================= */
+        /* ====================================================
+           SECTION TITLE
+        ==================================================== */
 
         .section-title {
+
+            display: flex;
+
+            align-items: center;
+
             color: #0f172a;
-            font-size: 16px;
+
+            font-size: 14px;
+
             font-weight: 800;
 
-            margin-top: 24px;
-            margin-bottom: 10px;
+            margin-top: 23px;
+
+            margin-bottom: 9px;
+
+            letter-spacing: -.2px;
         }
 
-        /* ================= INFO ================= */
+        .section-title:before {
+
+            content: "";
+
+            display: inline-block;
+
+            width: 3px;
+
+            height: 16px;
+
+            background: #1769e0;
+
+            border-radius: 4px;
+
+            margin-right: 8px;
+        }
+
+        /* ====================================================
+           STATUS NOTE
+        ==================================================== */
 
         .status-note {
-            border-radius: 12px;
 
-            padding: 12px 15px;
+            border-radius: 11px;
+
+            padding: 11px 14px;
 
             background: #ffffff;
 
-            border: 1px solid #e2e8f0;
+            border: 1px solid #dce5ef;
 
-            color: #475569;
+            color: #53657b;
 
-            font-size: 12px;
+            font-size: 11px;
 
-            margin-top: 15px;
+            line-height: 1.65;
+
+            margin-top: 14px;
+
+            box-shadow:
+                0 3px 12px rgba(15,23,42,.025);
         }
 
-        /* ================= FOOTER ================= */
+        .status-note b {
+            color: #172a42;
+        }
+
+        /* ====================================================
+           ALERTS
+        ==================================================== */
+
+        div[data-testid="stAlert"] {
+            border-radius: 10px;
+        }
+
+        /* ====================================================
+           FOOTER
+        ==================================================== */
 
         .footer {
-            color: #94a3b8;
+
+            color: #91a0b3;
+
             text-align: center;
 
-            font-size: 10px;
+            font-size: 9px;
 
-            padding: 25px 0 10px 0;
+            padding: 28px 0 8px 0;
+
+            letter-spacing: .5px;
+        }
+
+        /* ====================================================
+           MOBILE
+        ==================================================== */
+
+        @media (max-width: 768px) {
+
+            .main .block-container {
+                padding: 1rem;
+            }
+
+            .hero {
+                padding: 21px;
+            }
+
+            .hero-title {
+                font-size: 23px;
+            }
+
+            .date-bar {
+                gap: 10px;
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
         }
 
         </style>
@@ -371,9 +527,7 @@ def apply_v2_theme():
         unsafe_allow_html=True
     )
 
-
 apply_v2_theme()
-
 
 # ============================================================
 # 4. LOGO HELPERS
@@ -384,19 +538,19 @@ def get_logo_bytes():
 
     try:
 
-        response = requests.get(
-            LOGO_URL,
-            timeout=10
-        )
+        if not os.path.exists(LOGO_PATH):
+            return None
 
-        response.raise_for_status()
+        with open(
+            LOGO_PATH,
+            "rb"
+        ) as file:
 
-        return response.content
+            return file.read()
 
     except Exception:
 
         return None
-
 
 def show_sidebar_brand():
 
@@ -424,7 +578,7 @@ def show_sidebar_brand():
                 </div>
 
                 <div class="brand-sub">
-                    BIOMETRIC ATTENDANCE • V2
+                    HUMAN RESOURCES • BIOMETRIC SYSTEM V2
                 </div>
 
             </div>
@@ -447,14 +601,13 @@ def show_sidebar_brand():
                 </div>
 
                 <div class="brand-sub">
-                    BIOMETRIC ATTENDANCE • V2
+                    HUMAN RESOURCES • BIOMETRIC SYSTEM V2
                 </div>
 
             </div>
             """,
             unsafe_allow_html=True
         )
-
 
 # ============================================================
 # 5. RTL UTILITIES FOR WORD ONLY
@@ -463,6 +616,7 @@ def show_sidebar_brand():
 def set_rtl(paragraph):
 
     p = paragraph._element
+
     pPr = p.get_or_add_pPr()
 
     bidi = pPr.find(
@@ -474,7 +628,6 @@ def set_rtl(paragraph):
         bidi = OxmlElement("w:bidi")
 
         pPr.append(bidi)
-
 
 def set_table_rtl(table):
 
@@ -489,7 +642,6 @@ def set_table_rtl(table):
         )
 
         tbl_pr[0].append(bidi)
-
 
 # ============================================================
 # 6. FILE DATE
@@ -509,7 +661,6 @@ def extract_date_from_filename(
         return match.group(0)
 
     return str(date.today())
-
 
 # ============================================================
 # 7. BIOMETRIC EVENT CLASSIFICATION
@@ -557,7 +708,6 @@ def classify_gate_event(
 
     return None
 
-
 # ============================================================
 # 8. PROCESS GATE FILE
 # ============================================================
@@ -586,7 +736,7 @@ def process_gate(
         ]
 
         # ----------------------------------------------------
-        # Name
+        # NAME
         # ----------------------------------------------------
 
         if "الاسم" in df.columns:
@@ -607,7 +757,7 @@ def process_gate(
             return pd.DataFrame()
 
         # ----------------------------------------------------
-        # Time
+        # TIME
         # ----------------------------------------------------
 
         if "الوقت" not in df.columns:
@@ -620,7 +770,7 @@ def process_gate(
             return pd.DataFrame()
 
         # ----------------------------------------------------
-        # Event
+        # EVENT
         # ----------------------------------------------------
 
         if "Event" not in df.columns:
@@ -697,7 +847,6 @@ def process_gate(
         )
 
         return pd.DataFrame()
-
 
 # ============================================================
 # 9. PROCESS MAWJOOD APP
@@ -810,7 +959,6 @@ def process_app(file):
 
         return pd.DataFrame()
 
-
 # ============================================================
 # 10. BUILD DAILY REPORT
 # ============================================================
@@ -827,7 +975,7 @@ def build_daily_attendance(
 
     Selected date = 7 Oct
 
-    Check-In  = 7 Oct
+    Check-In = 7 Oct
     Check-Out = 6 Oct
     """
 
@@ -1053,7 +1201,6 @@ def build_daily_attendance(
         final_data
     )
 
-
 # ============================================================
 # 11. EXCEL EXPORT
 # ============================================================
@@ -1064,13 +1211,14 @@ def create_daily_excel(
 ):
 
     """
-    Compact, modern, LTR Excel.
+    Compact, modern, Arabic-first Excel.
 
     IMPORTANT:
-    No RTL.
-    No worksheet.right_to_left().
-    No set_print_area().
-    No large images.
+    - Workbook remains LTR.
+    - No RTL Excel setting.
+    - No worksheet.right_to_left().
+    - No set_print_area().
+    - No large images.
     """
 
     buffer = BytesIO()
@@ -1118,18 +1266,40 @@ def create_daily_excel(
         title_format = workbook.add_format(
             {
                 "bold": True,
-                "font_size": 14,
+                "font_size": 15,
                 "font_color": "#FFFFFF",
-                "bg_color": "#0F172A",
+                "bg_color": "#0B1727",
                 "align": "center",
                 "valign": "vcenter"
             }
         )
 
-        subtitle_format = workbook.add_format(
+        arabic_title_format = workbook.add_format(
+            {
+                "bold": True,
+                "font_size": 13,
+                "font_color": "#FFFFFF",
+                "bg_color": "#0B1727",
+                "align": "center",
+                "valign": "vcenter"
+            }
+        )
+
+        english_small_format = workbook.add_format(
+            {
+                "font_size": 8,
+                "font_color": "#8FA4BD",
+                "bg_color": "#0B1727",
+                "align": "center",
+                "valign": "vcenter"
+            }
+        )
+
+        date_format = workbook.add_format(
             {
                 "font_size": 9,
-                "font_color": "#64748B",
+                "font_color": "#334155",
+                "bg_color": "#F1F5F9",
                 "align": "center",
                 "valign": "vcenter"
             }
@@ -1139,7 +1309,7 @@ def create_daily_excel(
             {
                 "bold": True,
                 "font_color": "#FFFFFF",
-                "bg_color": "#2563EB",
+                "bg_color": "#1769E0",
                 "align": "center",
                 "valign": "vcenter",
                 "border": 1,
@@ -1158,35 +1328,74 @@ def create_daily_excel(
         )
 
         # ----------------------------------------------------
-        # TITLE
+        # ARABIC / ENGLISH TITLE
         # ----------------------------------------------------
 
         worksheet.merge_range(
             "A1:F1",
-            "ALTURATH UNIVERSITY • DAILY ATTENDANCE",
+            "جامعة التراث",
             title_format
         )
 
         worksheet.merge_range(
             "A2:F2",
+            "كشف الحضور والانصراف اليومي",
+            arabic_title_format
+        )
+
+        worksheet.merge_range(
+            "A3:F3",
+            "University Of Alturath • Daily Attendance",
+            english_small_format
+        )
+
+        worksheet.merge_range(
+            "A4:F4",
+            (
+                f"تاريخ الحضور: "
+                f"{target_date.strftime('%d %b %Y')}"
+                f"    |    "
+                f"تاريخ الانصراف: "
+                f"{previous_date.strftime('%d %b %Y')}"
+            ),
+            date_format
+        )
+
+        worksheet.merge_range(
+            "A5:F5",
             (
                 f"Check-In: "
                 f"{target_date.strftime('%d %b %Y')}"
-                f"    |    "
+                f"    •    "
                 f"Check-Out: "
                 f"{previous_date.strftime('%d %b %Y')}"
             ),
-            subtitle_format
+            english_small_format
         )
 
         worksheet.set_row(
             0,
-            26
+            24
         )
 
         worksheet.set_row(
             1,
+            22
+        )
+
+        worksheet.set_row(
+            2,
+            17
+        )
+
+        worksheet.set_row(
+            3,
             20
+        )
+
+        worksheet.set_row(
+            4,
+            17
         )
 
         # ----------------------------------------------------
@@ -1194,18 +1403,20 @@ def create_daily_excel(
         # ----------------------------------------------------
 
         headers = [
-            "No.",
-            "Name",
+            "ت",
+            "الاسم\nName",
             (
+                "الحضور\n"
                 "Check-In\n"
                 f"({target_date.strftime('%d %b')})"
             ),
             (
+                "الانصراف\n"
                 "Check-Out\n"
                 f"({previous_date.strftime('%d %b')})"
             ),
-            "Source",
-            "Status"
+            "المصدر\nSource",
+            "الحالة\nStatus"
         ]
 
         for col, header in enumerate(
@@ -1213,15 +1424,15 @@ def create_daily_excel(
         ):
 
             worksheet.write(
-                2,
+                5,
                 col,
                 header,
                 header_format
             )
 
         worksheet.set_row(
-            2,
-            32
+            5,
+            34
         )
 
         # ----------------------------------------------------
@@ -1232,7 +1443,7 @@ def create_daily_excel(
             export_df.iterrows()
         ):
 
-            excel_row = i + 3
+            excel_row = i + 6
 
             worksheet.write(
                 excel_row,
@@ -1310,7 +1521,7 @@ def create_daily_excel(
         # ----------------------------------------------------
 
         worksheet.freeze_panes(
-            3,
+            6,
             0
         )
 
@@ -1321,7 +1532,6 @@ def create_daily_excel(
     buffer.seek(0)
 
     return buffer.getvalue()
-
 
 # ============================================================
 # 12. WORD REPORT
@@ -1576,7 +1786,6 @@ def create_word_doc(df):
     buffer.seek(0)
 
     return buffer
-
 
 # ============================================================
 # 13. DAILY REPORT MODULE
@@ -2075,7 +2284,6 @@ def run_daily_report_module():
         f"Check-Out = {previous_date.strftime('%d %b %Y')}"
     )
 
-
 # ============================================================
 # 14. MULTI-DAY EXCEPTIONS MODULE
 # ============================================================
@@ -2148,14 +2356,17 @@ def run_exceptions_module():
                 else "openpyxl"
             )
 
-            # The V2 Excel has:
-            # row 1 = title
-            # row 2 = date info
-            # row 3 = headers
+            # V2 Excel structure:
+            # row 1 = Arabic university title
+            # row 2 = Arabic report title
+            # row 3 = English title
+            # row 4 = Arabic dates
+            # row 5 = English dates
+            # row 6 = table headers
             df = pd.read_excel(
                 file,
                 engine=engine,
-                header=2
+                header=5
             )
 
             df.columns = [
@@ -2164,6 +2375,48 @@ def run_exceptions_module():
             ]
 
             if (
+                "الحالة\nStatus" in df.columns
+                and
+                "الاسم\nName" in df.columns
+            ):
+
+                status_col = "الحالة\nStatus"
+                name_col = "الاسم\nName"
+
+                mask = (
+                    df[status_col]
+                    .astype(str)
+                    .str.contains(
+                        "Late|Absence|تأخير|غياب",
+                        case=False,
+                        na=False
+                    )
+                )
+
+                day_data = df[
+                    mask
+                ].copy()
+
+                day_data[
+                    "Report_Date"
+                ] = file_date
+
+                all_data.append(
+                    day_data[
+                        [
+                            name_col,
+                            status_col,
+                            "Report_Date"
+                        ]
+                    ].rename(
+                        columns={
+                            name_col: "Name",
+                            status_col: "Status"
+                        }
+                    )
+                )
+
+            elif (
                 "Status" in df.columns
                 and
                 "Name" in df.columns
@@ -2284,7 +2537,6 @@ def run_exceptions_module():
             )
         )
 
-
 # ============================================================
 # 15. NAVIGATION
 # ============================================================
@@ -2296,7 +2548,6 @@ app_mode = st.sidebar.selectbox(
         "Multi-Day Audit Tool"
     ]
 )
-
 
 # ============================================================
 # 16. RUN
@@ -2310,7 +2561,6 @@ else:
 
     run_exceptions_module()
 
-
 # ============================================================
 # 17. FOOTER
 # ============================================================
@@ -2323,3 +2573,5 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+Also, the local logo is now used in both the **sidebar** and the **Word report**, with no dependency on the university website for the logo.
