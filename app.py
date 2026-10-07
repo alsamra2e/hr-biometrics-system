@@ -1,4 +1,3 @@
-```
 import streamlit as st
 import pandas as pd
 import re
@@ -1793,4 +1792,3 @@ if app_mode == '📊 Daily Report Tool':
 else:
 
     run_exceptions_module()
-```
