@@ -2,17 +2,21 @@ import streamlit as st
 import pandas as pd
 import re
 import requests
+
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+
 from io import BytesIO
 from datetime import datetime, date, time, timedelta
+
 
 # ============================================================
 # ALTURATH HR SYSTEM — V2
 # ============================================================
+
 
 # ============================================================
 # 1. GLOBAL UTILITIES
@@ -28,6 +32,7 @@ def set_rtl(paragraph):
         bidi = OxmlElement('w:bidi')
         pPr.append(bidi)
 
+
 def set_table_rtl(table):
     tbl_pr = table._element.xpath('w:tblPr')
 
@@ -35,9 +40,15 @@ def set_table_rtl(table):
         bidi = OxmlElement('w:bidiVisual')
         tbl_pr[0].append(bidi)
 
+
 def extract_date_from_filename(filename):
     match = re.search(r'\d{4}-\d{2}-\d{2}', filename)
-    return match.group(0) if match else str(date.today())
+
+    if match:
+        return match.group(0)
+
+    return str(date.today())
+
 
 # ============================================================
 # 2. V2 WEBSITE THEME
@@ -45,140 +56,147 @@ def extract_date_from_filename(filename):
 
 def apply_v2_theme():
 
-    st.markdown("""
-    <style>
+    st.markdown(
+        """
+        <style>
 
-    .stApp {
-        background:
-            linear-gradient(
-                135deg,
-                #f8fafc 0%,
-                #eef2ff 45%,
-                #f0fdf4 100%
-            );
-    }
+        .stApp {
+            background:
+                linear-gradient(
+                    135deg,
+                    #f8fafc 0%,
+                    #eef2ff 45%,
+                    #f0fdf4 100%
+                );
+        }
 
-    section[data-testid="stSidebar"] {
-        background:
-            linear-gradient(
-                180deg,
-                #172554 0%,
-                #1e3a8a 45%,
-                #312e81 100%
-            );
-    }
+        section[data-testid="stSidebar"] {
+            background:
+                linear-gradient(
+                    180deg,
+                    #172554 0%,
+                    #1e3a8a 45%,
+                    #312e81 100%
+                );
+        }
 
-    section[data-testid="stSidebar"] * {
-        color: white !important;
-    }
+        section[data-testid="stSidebar"] * {
+            color: white !important;
+        }
 
-    section[data-testid="stSidebar"] .stSelectbox label,
-    section[data-testid="stSidebar"] .stFileUploader label,
-    section[data-testid="stSidebar"] .stDateInput label {
-        color: white !important;
-        font-weight: 600;
-    }
+        section[data-testid="stSidebar"] .stSelectbox label,
+        section[data-testid="stSidebar"] .stFileUploader label,
+        section[data-testid="stSidebar"] .stDateInput label {
+            color: white !important;
+            font-weight: 600;
+        }
 
-    .v2-title {
-        background:
-            linear-gradient(
-                135deg,
-                #1e3a8a,
-                #4f46e5,
-                #0891b2
-            );
+        .v2-title {
+            background:
+                linear-gradient(
+                    135deg,
+                    #1e3a8a,
+                    #4f46e5,
+                    #0891b2
+                );
 
-        color: white;
-        padding: 24px 28px;
-        border-radius: 18px;
-        margin-bottom: 20px;
+            color: white;
+            padding: 24px 28px;
+            border-radius: 18px;
+            margin-bottom: 20px;
 
-        box-shadow:
-            0 10px 25px rgba(30, 58, 138, 0.20);
-    }
+            box-shadow:
+                0 10px 25px rgba(30, 58, 138, 0.20);
+        }
 
-    .v2-title h1 {
-        margin: 0;
-        font-size: 32px;
-        font-weight: 800;
-    }
+        .v2-title h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 800;
+        }
 
-    .v2-title p {
-        margin: 5px 0 0 0;
-        opacity: 0.90;
-        font-size: 15px;
-    }
+        .v2-title p {
+            margin: 5px 0 0 0;
+            opacity: 0.90;
+            font-size: 15px;
+        }
 
-    .v2-info {
-        background:
-            linear-gradient(
-                135deg,
-                #dbeafe,
-                #e0e7ff
-            );
+        .v2-info {
+            background:
+                linear-gradient(
+                    135deg,
+                    #dbeafe,
+                    #e0e7ff
+                );
 
-        border-left: 5px solid #2563eb;
+            border-left: 5px solid #2563eb;
 
-        padding: 14px 18px;
-        border-radius: 10px;
+            padding: 14px 18px;
+            border-radius: 10px;
 
-        color: #1e3a8a;
-        font-weight: 600;
+            color: #1e3a8a;
+            font-weight: 600;
 
-        margin-bottom: 18px;
-    }
+            margin-bottom: 18px;
+        }
 
-    .stButton > button {
-        border-radius: 10px;
-        border: none;
+        .stButton > button {
+            border-radius: 10px;
+            border: none;
 
-        background:
-            linear-gradient(
-                135deg,
-                #2563eb,
-                #4f46e5
-            );
+            background:
+                linear-gradient(
+                    135deg,
+                    #2563eb,
+                    #4f46e5
+                );
 
-        color: white;
-        font-weight: 700;
+            color: white;
+            font-weight: 700;
 
-        padding: 8px 18px;
-    }
+            padding: 8px 18px;
+        }
 
-    .stButton > button:hover {
-        background:
-            linear-gradient(
-                135deg,
-                #1d4ed8,
-                #4338ca
-            );
+        .stButton > button:hover {
+            background:
+                linear-gradient(
+                    135deg,
+                    #1d4ed8,
+                    #4338ca
+                );
 
-        color: white;
-    }
+            color: white;
+        }
 
-    .stDownloadButton > button {
-        border-radius: 10px;
-        background:
-            linear-gradient(
-                135deg,
-                #059669,
-                #0d9488
-            );
+        .stDownloadButton > button {
+            border-radius: 10px;
 
-        color: white;
-        font-weight: 700;
-        border: none;
-    }
+            background:
+                linear-gradient(
+                    135deg,
+                    #059669,
+                    #0d9488
+                );
 
-    div[data-testid="stDataFrame"] {
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow:
-            0 5px 20px rgba(15,23,42,0.08);
-    }
+            color: white;
+            font-weight: 700;
 
-    </style>
-    """, unsafe_allow_html=True)
+            border: none;
+        }
+
+        div[data-testid="stDataFrame"] {
+            border-radius: 12px;
+            overflow: hidden;
+
+            box-shadow:
+                0 5px 20px rgba(15,23,42,0.08);
+        }
+
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 # ============================================================
 # 3. EVENT CLASSIFICATION
@@ -186,48 +204,44 @@ def apply_v2_theme():
 
 def classify_gate_event(event_value, punch_datetime):
     """
-    Exact business rule:
+    Attendance rules:
 
-    دخول(1) -> Check-In
+    دخول(1) = Check-In
 
-    خروج(2) -> Check-Out
+    خروج(2) before 12:00 = Check-In
+        This is the morning wrong-button correction.
 
-    Exception:
-    خروج(2) before 12:00 PM -> Check-In
-
-    This handles an employee accidentally pressing
-    the Check-Out button in the morning.
+    خروج(2) at/after 12:00 = Check-Out
     """
 
     event = str(event_value).strip()
 
     punch_time = punch_datetime.time()
 
+    # --------------------------------------------------------
     # دخول(1)
-    if "دخول" in event and "(1)" in event:
-        return "Check-In"
+    # --------------------------------------------------------
 
-    # Also tolerate minor formatting variations
     if "دخول" in event:
+
         return "Check-In"
 
+    # --------------------------------------------------------
     # خروج(2)
-    if "خروج" in event and "(2)" in event:
+    # --------------------------------------------------------
 
-        if punch_time < time(12, 0):
-            return "Check-In"
-
-        return "Check-Out"
-
-    # Fallback for slightly different export formatting
     if "خروج" in event:
 
+        # Morning checkout button used accidentally.
         if punch_time < time(12, 0):
+
             return "Check-In"
 
+        # Normal checkout.
         return "Check-Out"
 
     return None
+
 
 # ============================================================
 # 4. GATE PROCESSING
@@ -238,9 +252,9 @@ def process_gate(file, g_name):
     try:
 
         engine = (
-            'xlrd'
-            if file.name.endswith('.xls')
-            else 'openpyxl'
+            "xlrd"
+            if file.name.lower().endswith(".xls")
+            else "openpyxl"
         )
 
         df = pd.read_excel(
@@ -254,97 +268,122 @@ def process_gate(file, g_name):
         ]
 
         # ----------------------------------------------------
+        # Find Name column
+        # ----------------------------------------------------
+
+        if "الاسم" in df.columns:
+
+            name_col = "الاسم"
+
+        elif "الإسم" in df.columns:
+
+            name_col = "الإسم"
+
+        else:
+
+            st.warning(
+                f"{g_name}: Could not find the name column."
+            )
+
+            return pd.DataFrame()
+
+        # ----------------------------------------------------
         # Required columns
         # ----------------------------------------------------
 
-        if 'الوقت' not in df.columns:
+        if "الوقت" not in df.columns:
+
+            st.warning(
+                f"{g_name}: Could not find the الوقت column."
+            )
+
             return pd.DataFrame()
 
-        if 'Event' not in df.columns:
+        if "Event" not in df.columns:
+
+            st.warning(
+                f"{g_name}: Could not find the Event column."
+            )
+
             return pd.DataFrame()
 
         # ----------------------------------------------------
         # Name
         # ----------------------------------------------------
 
-        if 'الاسم' in df.columns:
-
-            df = df.rename(
-                columns={
-                    'الاسم': 'Name'
-                }
-            )
-
-        elif 'الإسم' in df.columns:
-
-            df = df.rename(
-                columns={
-                    'الإسم': 'Name'
-                }
-            )
-
-        else:
-
-            return pd.DataFrame()
+        df["Name"] = (
+            df[name_col]
+            .astype(str)
+            .str.strip()
+        )
 
         # ----------------------------------------------------
         # Datetime
         # ----------------------------------------------------
 
-        df['dt'] = pd.to_datetime(
-            df['الوقت'],
-            errors='coerce'
+        df["dt"] = pd.to_datetime(
+            df["الوقت"],
+            errors="coerce"
         )
 
         df = df[
-            df['dt'].notna()
+            df["dt"].notna()
             &
-            df['Name'].notna()
+            df["Name"].notna()
+            &
+            (df["Name"] != "")
+            &
+            (df["Name"] != "nan")
         ].copy()
 
         # ----------------------------------------------------
-        # Event classification
+        # Event type
         # ----------------------------------------------------
 
-        df['Event_Type'] = df.apply(
+        df["Event_Type"] = df.apply(
             lambda row:
-            classify_gate_event(
-                row['Event'],
-                row['dt']
-            ),
+                classify_gate_event(
+                    row["Event"],
+                    row["dt"]
+                ),
             axis=1
         )
 
         df = df[
-            df['Event_Type'].notna()
+            df["Event_Type"].notna()
         ].copy()
 
         # ----------------------------------------------------
         # Date / Time
         # ----------------------------------------------------
 
-        df['Date'] = df['dt'].dt.date
+        df["Date"] = df["dt"].dt.date
 
-        df['Time'] = df['dt'].dt.strftime(
-            '%H:%M'
+        df["Time"] = df["dt"].dt.strftime(
+            "%H:%M"
         )
 
-        df['Source'] = g_name
+        df["Source"] = g_name
 
         return df[
             [
-                'Name',
-                'dt',
-                'Date',
-                'Time',
-                'Event_Type',
-                'Source'
+                "Name",
+                "dt",
+                "Date",
+                "Time",
+                "Event_Type",
+                "Source"
             ]
-        ]
+        ].sort_values("dt")
 
-    except Exception:
+    except Exception as e:
+
+        st.error(
+            f"Error processing {g_name}: {e}"
+        )
 
         return pd.DataFrame()
+
 
 # ============================================================
 # 5. MAWJOOD APP PROCESSING
@@ -364,7 +403,8 @@ def process_app(file):
             for c in df.columns
         ]
 
-        if 'الاسم' not in df.columns:
+        if "الاسم" not in df.columns:
+
             return pd.DataFrame()
 
         result = []
@@ -373,71 +413,81 @@ def process_app(file):
         # Check-In
         # ----------------------------------------------------
 
-        if 'دخول' in df.columns:
+        if "دخول" in df.columns:
 
             for _, row in df.iterrows():
 
                 dt = pd.to_datetime(
-                    row['دخول'],
-                    errors='coerce'
+                    row["دخول"],
+                    errors="coerce"
                 )
 
                 if pd.notna(dt):
 
-                    result.append({
-                        'Name': row['الاسم'],
-                        'dt': dt,
-                        'Date': dt.date(),
-                        'Time': dt.strftime('%H:%M'),
-                        'Event_Type': 'Check-In',
-                        'Source': 'App'
-                    })
+                    result.append(
+                        {
+                            "Name": row["الاسم"],
+                            "dt": dt,
+                            "Date": dt.date(),
+                            "Time": dt.strftime("%H:%M"),
+                            "Event_Type": "Check-In",
+                            "Source": "App"
+                        }
+                    )
 
         # ----------------------------------------------------
         # Check-Out
         # ----------------------------------------------------
 
-        possible_checkout_columns = [
-            'خروج',
-            'الانصراف',
-            'وقت الخروج',
-            'Check-Out',
-            'Checkout'
+        checkout_columns = [
+            "خروج",
+            "الانصراف",
+            "وقت الخروج",
+            "Check-Out",
+            "Checkout"
         ]
 
-        checkout_column = None
+        checkout_col = None
 
-        for col in possible_checkout_columns:
+        for col in checkout_columns:
 
             if col in df.columns:
-                checkout_column = col
+
+                checkout_col = col
                 break
 
-        if checkout_column:
+        if checkout_col:
 
             for _, row in df.iterrows():
 
                 dt = pd.to_datetime(
-                    row[checkout_column],
-                    errors='coerce'
+                    row[checkout_col],
+                    errors="coerce"
                 )
 
                 if pd.notna(dt):
 
-                    result.append({
-                        'Name': row['الاسم'],
-                        'dt': dt,
-                        'Date': dt.date(),
-                        'Time': dt.strftime('%H:%M'),
-                        'Event_Type': 'Check-Out',
-                        'Source': 'App'
-                    })
+                    result.append(
+                        {
+                            "Name": row["الاسم"],
+                            "dt": dt,
+                            "Date": dt.date(),
+                            "Time": dt.strftime("%H:%M"),
+                            "Event_Type": "Check-Out",
+                            "Source": "App"
+                        }
+                    )
 
         return pd.DataFrame(result)
 
-    except Exception:
+    except Exception as e:
+
+        st.error(
+            f"Error processing Mawjood App: {e}"
+        )
 
         return pd.DataFrame()
+
 
 # ============================================================
 # 6. BUILD DAILY ATTENDANCE
@@ -452,455 +502,543 @@ def build_daily_attendance(
 
     master_names = set()
 
+    # --------------------------------------------------------
+    # Names from attendance
+    # --------------------------------------------------------
+
     if not df_logs.empty:
+
         master_names.update(
-            df_logs['Name']
+            df_logs["Name"]
             .dropna()
             .astype(str)
+            .str.strip()
             .tolist()
         )
 
+    # --------------------------------------------------------
+    # Names from weekly off list
+    # --------------------------------------------------------
+
     if not df_off.empty:
+
         master_names.update(
-            df_off['Name']
+            df_off["Name"]
             .dropna()
             .astype(str)
+            .str.strip()
             .tolist()
         )
 
     final_data = []
 
-    # --------------------------------------------------------
-    # Overnight window
-    #
-    # We look at the previous day after noon and the
-    # selected day before noon, so a previous-day shift
-    # can receive its midnight checkout.
-    # --------------------------------------------------------
-
     previous_date = (
-        target_date - timedelta(days=1)
+        target_date
+        - timedelta(days=1)
     )
+
+    # ========================================================
+    # ONE EMPLOYEE AT A TIME
+    # ========================================================
 
     for name in sorted(master_names):
 
-        person_logs = df_logs[
-            df_logs['Name'].astype(str) == str(name)
+        person = df_logs[
+            df_logs["Name"]
+            .astype(str)
+            .str.strip()
+            == str(name).strip()
         ].copy()
 
-        person_logs = person_logs.sort_values(
-            'dt'
+        person = person.sort_values(
+            "dt"
         )
 
-        # ----------------------------------------------------
-        # Check-In records belonging to target date
-        # ----------------------------------------------------
+        # ====================================================
+        # TODAY'S CHECK-IN
+        # ====================================================
 
-        target_checkins = person_logs[
-            (person_logs['Date'] == target_date)
+        today_checkins = person[
+            (person["Date"] == target_date)
             &
-            (person_logs['Event_Type'] == 'Check-In')
+            (person["Event_Type"] == "Check-In")
         ].copy()
 
-        # ----------------------------------------------------
-        # Check-Out records on target date
-        # ----------------------------------------------------
+        # ====================================================
+        # TODAY'S CHECK-OUT
+        # ====================================================
 
-        target_checkouts = person_logs[
-            (person_logs['Date'] == target_date)
+        today_checkouts = person[
+            (person["Date"] == target_date)
             &
-            (person_logs['Event_Type'] == 'Check-Out')
+            (person["Event_Type"] == "Check-Out")
         ].copy()
 
-        # ----------------------------------------------------
-        # Determine Check-In
-        # ----------------------------------------------------
+        # ====================================================
+        # CHECK-IN
+        # ====================================================
 
-        check_in = None
+        check_in = "-"
         check_in_dt = None
-        check_in_source = None
+        check_in_source = "-"
 
-        if not target_checkins.empty:
+        if not today_checkins.empty:
 
-            # Earliest valid Check-In
-            selected = target_checkins.iloc[0]
+            # Earliest Check-In
+            selected_checkin = (
+                today_checkins
+                .sort_values("dt")
+                .iloc[0]
+            )
 
-            check_in = selected['Time']
-            check_in_dt = selected['dt']
-            check_in_source = selected['Source']
+            check_in = selected_checkin["Time"]
 
-        # ----------------------------------------------------
-        # Determine Check-Out
-        # ----------------------------------------------------
+            check_in_dt = selected_checkin["dt"]
 
-        check_out = None
+            check_in_source = (
+                selected_checkin["Source"]
+            )
+
+        # ====================================================
+        # CHECK-OUT
+        # ====================================================
+
+        check_out = "-"
         check_out_dt = None
-        check_out_source = None
+        check_out_source = "-"
 
-        if not target_checkouts.empty:
+        if not today_checkouts.empty:
 
-            # Prefer a Check-Out after the Check-In.
             if check_in_dt is not None:
 
-                after_checkin = target_checkouts[
-                    target_checkouts['dt'] > check_in_dt
+                # Find checkouts after check-in.
+                valid_checkouts = today_checkouts[
+                    today_checkouts["dt"]
+                    > check_in_dt
                 ]
 
-                if not after_checkin.empty:
+                if not valid_checkouts.empty:
 
-                    selected = after_checkin.iloc[-1]
+                    selected_checkout = (
+                        valid_checkouts
+                        .sort_values("dt")
+                        .iloc[-1]
+                    )
 
                 else:
 
-                    selected = target_checkouts.iloc[-1]
+                    selected_checkout = (
+                        today_checkouts
+                        .sort_values("dt")
+                        .iloc[-1]
+                    )
 
             else:
 
-                selected = target_checkouts.iloc[-1]
+                # Person has a checkout but no check-in.
+                selected_checkout = (
+                    today_checkouts
+                    .sort_values("dt")
+                    .iloc[-1]
+                )
 
-            check_out = selected['Time']
-            check_out_dt = selected['dt']
-            check_out_source = selected['Source']
+            check_out = selected_checkout["Time"]
 
-        # ----------------------------------------------------
-        # OVERNIGHT CHECKOUT
+            check_out_dt = selected_checkout["dt"]
+
+            check_out_source = (
+                selected_checkout["Source"]
+            )
+
+        # ====================================================
+        # OVERNIGHT CHECKOUT INFORMATION
+        # ====================================================
+
+        # Previous day's Check-In
+        previous_checkins = person[
+            (person["Date"] == previous_date)
+            &
+            (person["Event_Type"] == "Check-In")
+        ]
+
+        # Today's early-morning Check-Out
+        early_checkouts = person[
+            (person["Date"] == target_date)
+            &
+            (person["Event_Type"] == "Check-Out")
+            &
+            (
+                person["dt"].dt.time
+                < time(12, 0)
+            )
+        ]
+
+        # This is intentionally NOT added to today's record.
         #
         # Example:
         #
-        # Oct 6 20:00 دخول(1)
-        # Oct 7 02:00 خروج(2)
+        # 2026-10-06 20:00 دخول(1)
+        # 2026-10-07 02:00 خروج(2)
         #
-        # The 02:00 checkout belongs to Oct 6.
-        # ----------------------------------------------------
-
-        if check_in_dt is not None:
-
-            overnight_checkouts = person_logs[
-                (person_logs['Date'] == target_date)
-                &
-                (person_logs['Event_Type'] == 'Check-Out')
-                &
-                (
-                    person_logs['dt']
-                    <= check_in_dt + timedelta(hours=12)
-                )
-            ]
-
-            # If there is a normal same-day checkout,
-            # it remains the selected checkout.
-            #
-            # This block mainly protects overnight shifts
-            # where checkout happens after midnight.
-
-        else:
-
-            # No target-day check-in.
-            #
-            # Look for previous-day Check-In and a
-            # post-midnight Check-Out.
-            previous_checkins = person_logs[
-                (person_logs['Date'] == previous_date)
-                &
-                (person_logs['Event_Type'] == 'Check-In')
-            ]
-
-            overnight_checkouts = person_logs[
-                (person_logs['Date'] == target_date)
-                &
-                (person_logs['Event_Type'] == 'Check-Out')
-                &
-                (
-                    person_logs['dt'].dt.time
-                    < time(12, 0)
-                )
-            ]
-
-            if (
-                not previous_checkins.empty
-                and not overnight_checkouts.empty
-            ):
-
-                # This checkout is actually for the
-                # previous day's attendance.
-                #
-                # We do not put it into today's report.
-                #
-                # Today's employee therefore remains absent
-                # unless another valid target-day punch exists.
-                pass
-
-        # ----------------------------------------------------
-        # IMPORTANT:
+        # The 02:00 checkout belongs to 2026-10-06.
         #
-        # If the selected target date has no Check-In but
-        # has a morning خروج(2), our classifier already
-        # converted that morning خروج(2) into Check-In.
-        # Therefore it will appear above as target_checkins.
-        # ----------------------------------------------------
+        # To display that checkout when 2026-10-06 is selected,
+        # we handle it below in the previous-day matching logic.
 
-        # ----------------------------------------------------
-        # Weekly Off
-        # ----------------------------------------------------
+        # ====================================================
+        # IF TARGET DATE HAS CHECK-IN, LOOK FOR OVERNIGHT
+        # CHECKOUT ON THE NEXT DAY
+        # ====================================================
 
-        off_info = df_off[
-            df_off['Name'].astype(str) == str(name)
-        ]
-
-        is_off = (
-            not off_info.empty
-            and str(off_info['OffDay'].iloc[0]).strip()
-            == str(current_weekday_ar).strip()
+        next_date = (
+            target_date
+            + timedelta(days=1)
         )
 
-        # ----------------------------------------------------
-        # Build row
-        # ----------------------------------------------------
+        next_day_early_checkouts = person[
+            (person["Date"] == next_date)
+            &
+            (person["Event_Type"] == "Check-Out")
+            &
+            (
+                person["dt"].dt.time
+                < time(12, 0)
+            )
+        ]
+
+        if (
+            check_in_dt is not None
+            and
+            not next_day_early_checkouts.empty
+        ):
+
+            # Only attach a next-day checkout if it is
+            # reasonably close to the previous day's check-in.
+            #
+            # Maximum 18 hours from Check-In.
+
+            valid_overnight = (
+                next_day_early_checkouts[
+                    (
+                        next_day_early_checkouts["dt"]
+                        > check_in_dt
+                    )
+                    &
+                    (
+                        next_day_early_checkouts["dt"]
+                        <=
+                        check_in_dt
+                        + timedelta(hours=18)
+                    )
+                ]
+            )
+
+            if not valid_overnight.empty:
+
+                selected_checkout = (
+                    valid_overnight
+                    .sort_values("dt")
+                    .iloc[-1]
+                )
+
+                check_out = (
+                    selected_checkout["Time"]
+                )
+
+                check_out_dt = (
+                    selected_checkout["dt"]
+                )
+
+                check_out_source = (
+                    selected_checkout["Source"]
+                )
+
+        # ====================================================
+        # WEEKLY OFF
+        # ====================================================
+
+        off_info = df_off[
+            df_off["Name"]
+            .astype(str)
+            .str.strip()
+            ==
+            str(name).strip()
+        ]
+
+        is_off = False
+
+        if not off_info.empty:
+
+            is_off = (
+                str(
+                    off_info["OffDay"].iloc[0]
+                ).strip()
+                ==
+                str(current_weekday_ar).strip()
+            )
+
+        # ====================================================
+        # FINAL ROW
+        # ====================================================
 
         row = {
-            'Name': name,
-            'Check-In': '-',
-            'Check-Out': '-',
-            'Source': '-',
-            'Status': ''
+            "Name": name,
+            "Check-In": check_in,
+            "Check-Out": check_out,
+            "Source": "-",
+            "Status": ""
         }
 
         # ----------------------------------------------------
-        # Has Check-In
+        # Source
         # ----------------------------------------------------
 
-        if check_in is not None:
+        if check_in_source != "-":
 
-            row['Check-In'] = check_in
+            row["Source"] = check_in_source
 
-            if check_out is not None:
-                row['Check-Out'] = check_out
+        elif check_out_source != "-":
 
-            row['Source'] = (
-                check_in_source
-                if check_in_source
-                else (
-                    check_out_source
-                    if check_out_source
-                    else '-'
-                )
-            )
+            row["Source"] = check_out_source
 
-            if check_in > '08:35':
+        # ====================================================
+        # STATUS
+        # ====================================================
 
-                row['Status'] = '🔴 Late'
+        if check_in != "-":
+
+            if check_in > "08:35":
+
+                row["Status"] = "🔴 Late"
 
             else:
 
-                row['Status'] = '✅ On Time'
+                row["Status"] = "✅ On Time"
 
-        # ----------------------------------------------------
-        # Has only Check-Out
-        # ----------------------------------------------------
+        elif check_out != "-":
 
-        elif check_out is not None:
-
-            row['Check-Out'] = check_out
-
-            row['Source'] = (
-                check_out_source
-                if check_out_source
-                else '-'
+            row["Status"] = (
+                "⚠️ Check-Out Only"
             )
-
-            # No check-in means we don't invent one.
-            row['Status'] = '⚠️ Check-Out Only'
-
-        # ----------------------------------------------------
-        # Weekly Off
-        # ----------------------------------------------------
 
         elif is_off:
 
-            row['Status'] = '🟡 Weekly Off'
-
-        # ----------------------------------------------------
-        # Absence
-        # ----------------------------------------------------
+            row["Status"] = (
+                "🟡 Weekly Off"
+            )
 
         else:
 
-            row['Status'] = '❌ Absence'
+            row["Status"] = (
+                "❌ Absence"
+            )
 
         final_data.append(row)
 
     return pd.DataFrame(final_data)
 
+
 # ============================================================
-# 7. EXCEL EXPORT — V2
+# 7. EXCEL EXPORT
 # ============================================================
 
-def create_daily_excel(df_final, target_date):
+def create_daily_excel(
+    df_final,
+    target_date
+):
 
     buf = BytesIO()
 
     with pd.ExcelWriter(
         buf,
-        engine='xlsxwriter'
+        engine="xlsxwriter"
     ) as writer:
 
         workbook = writer.book
 
         worksheet = workbook.add_worksheet(
-            'Audit'
+            "Audit"
         )
 
-        writer.sheets['Audit'] = worksheet
+        writer.sheets["Audit"] = worksheet
 
-        # ----------------------------------------------------
+        # ====================================================
         # COLORS
-        # ----------------------------------------------------
+        # ====================================================
 
-        dark_blue = '#172554'
-        blue = '#2563EB'
-        green = '#DCFCE7'
-        red = '#FEE2E2'
-        yellow = '#FEF3C7'
-        orange = '#FFEDD5'
-        white = '#FFFFFF'
-        black = '#000000'
+        dark_blue = "#172554"
+        blue = "#2563EB"
 
-        # ----------------------------------------------------
+        green_bg = "#DCFCE7"
+        green_text = "#047857"
+
+        red_bg = "#FEE2E2"
+        red_text = "#B91C1C"
+
+        yellow_bg = "#FEF3C7"
+        yellow_text = "#92400E"
+
+        orange_bg = "#FFEDD5"
+        orange_text = "#9A3412"
+
+        white = "#FFFFFF"
+        black = "#000000"
+
+        # ====================================================
         # FORMATS
-        # ----------------------------------------------------
+        # ====================================================
 
-        title_format = workbook.add_format({
-            'bold': True,
-            'font_size': 16,
-            'font_color': white,
-            'bg_color': dark_blue,
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1,
-            'border_color': black,
-        })
+        title_format = workbook.add_format(
+            {
+                "bold": True,
+                "font_size": 16,
+                "font_color": white,
+                "bg_color": dark_blue,
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": black
+            }
+        )
 
-        header_format = workbook.add_format({
-            'bold': True,
-            'font_size': 10,
-            'font_color': white,
-            'bg_color': blue,
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1,
-            'border_color': black,
-        })
+        header_format = workbook.add_format(
+            {
+                "bold": True,
+                "font_size": 11,
+                "font_color": white,
+                "bg_color": blue,
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": black
+            }
+        )
 
-        cell_format = workbook.add_format({
-            'font_size': 10,
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1,
-            'border_color': black,
-        })
+        cell_format = workbook.add_format(
+            {
+                "font_size": 10,
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": black
+            }
+        )
 
-        name_format = workbook.add_format({
-            'font_size': 10,
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1,
-            'border_color': black,
-            'reading_order': 2,
-        })
+        name_format = workbook.add_format(
+            {
+                "font_size": 10,
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": black,
+                "reading_order": 2
+            }
+        )
 
-        ontime_format = workbook.add_format({
-            'font_size': 10,
-            'font_color': '#047857',
-            'bold': True,
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1,
-            'border_color': black,
-            'bg_color': green,
-        })
+        ontime_format = workbook.add_format(
+            {
+                "font_size": 10,
+                "font_color": green_text,
+                "bold": True,
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": black,
+                "bg_color": green_bg
+            }
+        )
 
-        late_format = workbook.add_format({
-            'font_size': 10,
-            'font_color': '#B91C1C',
-            'bold': True,
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1,
-            'border_color': black,
-            'bg_color': red,
-        })
+        late_format = workbook.add_format(
+            {
+                "font_size": 10,
+                "font_color": red_text,
+                "bold": True,
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": black,
+                "bg_color": red_bg
+            }
+        )
 
-        off_format = workbook.add_format({
-            'font_size': 10,
-            'font_color': '#92400E',
-            'bold': True,
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1,
-            'border_color': black,
-            'bg_color': yellow,
-        })
+        off_format = workbook.add_format(
+            {
+                "font_size": 10,
+                "font_color": yellow_text,
+                "bold": True,
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": black,
+                "bg_color": yellow_bg
+            }
+        )
 
-        absence_format = workbook.add_format({
-            'font_size': 10,
-            'font_color': '#991B1B',
-            'bold': True,
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1,
-            'border_color': black,
-            'bg_color': red,
-        })
+        absence_format = workbook.add_format(
+            {
+                "font_size": 10,
+                "font_color": red_text,
+                "bold": True,
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": black,
+                "bg_color": red_bg
+            }
+        )
 
-        checkout_only_format = workbook.add_format({
-            'font_size': 10,
-            'font_color': '#9A3412',
-            'bold': True,
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1,
-            'border_color': black,
-            'bg_color': orange,
-        })
+        checkout_only_format = workbook.add_format(
+            {
+                "font_size": 10,
+                "font_color": orange_text,
+                "bold": True,
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": black,
+                "bg_color": orange_bg
+            }
+        )
 
-        # ----------------------------------------------------
+        # ====================================================
         # RTL
-        # ----------------------------------------------------
+        # ====================================================
 
         worksheet.right_to_left()
 
-        # ----------------------------------------------------
+        # ====================================================
         # TITLE
-        # ----------------------------------------------------
+        # ====================================================
 
         title = (
-            f'جامعة التراث - الموقف اليومي - '
-            f'{target_date.strftime("%Y/%m/%d")}'
+            "جامعة التراث - الموقف اليومي - "
+            f"{target_date.strftime('%Y/%m/%d')}"
         )
 
         worksheet.merge_range(
-            'A1:F1',
+            "A1:F1",
             title,
             title_format
         )
 
         worksheet.set_row(
             0,
-            30
+            32
         )
 
-        # ----------------------------------------------------
+        # ====================================================
         # HEADER
-        # Row 2 intentionally preserved for the
-        # Multi-Day Audit module.
-        # ----------------------------------------------------
+        #
+        # Row 2 remains the header intentionally.
+        # ====================================================
 
         headers = [
-            'No',
-            'Name',
-            'Check-In',
-            'Check-Out',
-            'Source',
-            'Status'
+            "No",
+            "Name",
+            "Check-In",
+            "Check-Out",
+            "Source",
+            "Status"
         ]
 
         for col, header in enumerate(headers):
@@ -914,46 +1052,47 @@ def create_daily_excel(df_final, target_date):
 
         worksheet.set_row(
             1,
+            26
+        )
+
+        # ====================================================
+        # COLUMN WIDTHS
+        # ====================================================
+
+        worksheet.set_column(
+            "A:A",
+            8
+        )
+
+        worksheet.set_column(
+            "B:B",
+            34
+        )
+
+        worksheet.set_column(
+            "C:D",
+            14
+        )
+
+        worksheet.set_column(
+            "E:E",
             24
         )
 
-        # ----------------------------------------------------
-        # COLUMN WIDTHS
-        # ----------------------------------------------------
-
         worksheet.set_column(
-            'A:A',
-            7
+            "F:F",
+            22
         )
 
-        worksheet.set_column(
-            'B:B',
-            32
-        )
-
-        worksheet.set_column(
-            'C:D',
-            13
-        )
-
-        worksheet.set_column(
-            'E:E',
-            23
-        )
-
-        worksheet.set_column(
-            'F:F',
-            20
-        )
-
-        # ----------------------------------------------------
+        # ====================================================
         # DATA
-        # ----------------------------------------------------
+        # ====================================================
 
         for row_idx, row in df_final.iterrows():
 
             excel_row = row_idx + 2
 
+            # Number
             worksheet.write(
                 excel_row,
                 0,
@@ -961,49 +1100,56 @@ def create_daily_excel(df_final, target_date):
                 cell_format
             )
 
+            # Name
             worksheet.write(
                 excel_row,
                 1,
-                str(row['Name']),
+                str(row["Name"]),
                 name_format
             )
 
+            # Check-In
             worksheet.write(
                 excel_row,
                 2,
-                str(row['Check-In']),
+                str(row["Check-In"]),
                 cell_format
             )
 
+            # Check-Out
             worksheet.write(
                 excel_row,
                 3,
-                str(row['Check-Out']),
+                str(row["Check-Out"]),
                 cell_format
             )
 
+            # Source
             worksheet.write(
                 excel_row,
                 4,
-                str(row['Source']),
+                str(row["Source"]),
                 cell_format
             )
 
-            status = str(row['Status'])
+            # Status
+            status = str(
+                row["Status"]
+            )
 
-            if 'On Time' in status:
+            if "On Time" in status:
 
                 status_format = ontime_format
 
-            elif 'Late' in status:
+            elif "Late" in status:
 
                 status_format = late_format
 
-            elif 'Weekly Off' in status:
+            elif "Weekly Off" in status:
 
                 status_format = off_format
 
-            elif 'Check-Out Only' in status:
+            elif "Check-Out Only" in status:
 
                 status_format = checkout_only_format
 
@@ -1020,12 +1166,12 @@ def create_daily_excel(df_final, target_date):
 
             worksheet.set_row(
                 excel_row,
-                23
+                24
             )
 
-        # ----------------------------------------------------
-        # PRINT / VIEW
-        # ----------------------------------------------------
+        # ====================================================
+        # EXCEL VIEW
+        # ====================================================
 
         worksheet.freeze_panes(
             2,
@@ -1036,6 +1182,7 @@ def create_daily_excel(df_final, target_date):
             2
         )
 
+        # Landscape printing
         worksheet.set_landscape()
 
         worksheet.fit_to_pages(
@@ -1050,16 +1197,14 @@ def create_daily_excel(df_final, target_date):
             bottom=0.40
         )
 
-        worksheet.set_print_area(
-            0,
-            0,
-            len(df_final) + 1,
-            5
-        )
+        # IMPORTANT:
+        # No set_print_area() here because some
+        # XlsxWriter versions don't support it properly.
 
     buf.seek(0)
 
     return buf.getvalue()
+
 
 # ============================================================
 # 8. WORD REPORT
@@ -1079,29 +1224,50 @@ def create_word_doc(df):
         width=Inches(6.5)
     )
 
+    # --------------------------------------------------------
     # Arabic
-    r = htable.rows[0].cells[0].paragraphs[0]
+    # --------------------------------------------------------
 
-    r.text = (
-        'جامعة التراث\n'
-        'قسم الشؤون الإدارية والمالية\n'
-        'شعبة الموارد البشرية'
+    r = (
+        htable
+        .rows[0]
+        .cells[0]
+        .paragraphs[0]
     )
 
-    r.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    r.text = (
+        "جامعة التراث\n"
+        "قسم الشؤون الإدارية والمالية\n"
+        "شعبة الموارد البشرية"
+    )
+
+    r.alignment = (
+        WD_ALIGN_PARAGRAPH.RIGHT
+    )
 
     set_rtl(r)
 
+    # --------------------------------------------------------
     # Logo
-    m = htable.rows[0].cells[1].paragraphs[0]
+    # --------------------------------------------------------
 
-    m.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    m = (
+        htable
+        .rows[0]
+        .cells[1]
+        .paragraphs[0]
+    )
+
+    m.alignment = (
+        WD_ALIGN_PARAGRAPH.CENTER
+    )
 
     try:
 
         img_url = (
-            'https://uoturath.edu.iq/'
-            'wp-content/uploads/2025/03/shield-1.png'
+            "https://uoturath.edu.iq/"
+            "wp-content/uploads/2025/03/"
+            "shield-1.png"
         )
 
         response = requests.get(
@@ -1118,25 +1284,39 @@ def create_word_doc(df):
             width=Inches(0.8)
         )
 
-    except:
+    except Exception:
+
         pass
 
+    # --------------------------------------------------------
     # English
-    l = htable.rows[0].cells[2].paragraphs[0]
+    # --------------------------------------------------------
 
-    l.text = (
-        'University Of Alturath\n'
-        'Dept. Of Admin & Financial Affairs\n'
-        'HR Department'
+    l = (
+        htable
+        .rows[0]
+        .cells[2]
+        .paragraphs[0]
     )
 
-    l.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    l.text = (
+        "University Of Alturath\n"
+        "Dept. Of Admin & Financial Affairs\n"
+        "HR Department"
+    )
 
+    l.alignment = (
+        WD_ALIGN_PARAGRAPH.LEFT
+    )
+
+    # --------------------------------------------------------
     # Separator
+    # --------------------------------------------------------
+
     p_line = doc.add_paragraph()
 
     run_line = p_line.add_run(
-        '______________________________________________________________________'
+        "______________________________________________________________________"
     )
 
     run_line.font.color.rgb = RGBColor(
@@ -1145,38 +1325,49 @@ def create_word_doc(df):
         0x0B
     )
 
-    p_line.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-    # Body
-    body = doc.add_paragraph(
-        '\nنرفق لسيادتكم في ادناه الكشف الخاص بموقف الحضور والغياب '
-        'لكادر العمل الخاص بجامعة التراث وحسب كشف البصمة المرفق '
-        'طيا نسخة منه ... راجين التفضل بالاطلاع واعلامنا توجيهات '
-        'سيادتكم حول ذلك ... مع التقدير..'
+    p_line.alignment = (
+        WD_ALIGN_PARAGRAPH.CENTER
     )
 
-    body.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    # --------------------------------------------------------
+    # Body
+    # --------------------------------------------------------
+
+    body = doc.add_paragraph(
+        "\nنرفق لسيادتكم في ادناه الكشف الخاص بموقف "
+        "الحضور والغياب لكادر العمل الخاص بجامعة التراث "
+        "وحسب كشف البصمة المرفق طيا نسخة منه ... "
+        "راجين التفضل بالاطلاع واعلامنا توجيهات سيادتكم "
+        "حول ذلك ... مع التقدير.."
+    )
+
+    body.alignment = (
+        WD_ALIGN_PARAGRAPH.RIGHT
+    )
 
     set_rtl(body)
 
+    # --------------------------------------------------------
     # Table
+    # --------------------------------------------------------
+
     table = doc.add_table(
         rows=1,
         cols=5
     )
 
-    table.style = 'Table Grid'
+    table.style = "Table Grid"
 
     set_table_rtl(table)
 
     hdr = table.rows[0].cells
 
     labels = [
-        'ت',
-        'الاسم',
-        'الحالة',
-        'العدد',
-        'التواريخ'
+        "ت",
+        "الاسم",
+        "الحالة",
+        "العدد",
+        "التواريخ"
     ]
 
     for i, txt in enumerate(labels):
@@ -1191,30 +1382,39 @@ def create_word_doc(df):
             hdr[i].paragraphs[0]
         )
 
+    # --------------------------------------------------------
+    # Data
+    # --------------------------------------------------------
+
     for idx, row in df.iterrows():
 
         cells = table.add_row().cells
 
-        cells[0].text = str(idx + 1)
+        cells[0].text = str(
+            idx + 1
+        )
 
         cells[1].text = str(
-            row['Name']
+            row["Name"]
         )
 
         cells[2].text = (
-            'تأخير'
-            if 'Late' in str(row['Status'])
-            else 'غياب'
+            "تأخير"
+            if "Late" in str(row["Status"])
+            else "غياب"
         )
 
         cells[3].text = str(
-            row['Count']
+            row["Count"]
         )
 
-        d_para = cells[4].paragraphs[0]
+        d_para = (
+            cells[4]
+            .paragraphs[0]
+        )
 
         d_run = d_para.add_run(
-            row['Dates_Str']
+            row["Dates_Str"]
         )
 
         d_run.font.size = Pt(8)
@@ -1229,14 +1429,22 @@ def create_word_doc(df):
                 cell.paragraphs[0]
             )
 
-    doc.add_paragraph('\n\n')
+    # --------------------------------------------------------
+    # Signature
+    # --------------------------------------------------------
 
-    sig = doc.add_paragraph(
-        'م.م محمد زهير طالب النقيب\n'
-        'مدير قسم الشؤون الادارية والموارد البشرية'
+    doc.add_paragraph(
+        "\n\n"
     )
 
-    sig.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    sig = doc.add_paragraph(
+        "م.م محمد زهير طالب النقيب\n"
+        "مدير قسم الشؤون الادارية والموارد البشرية"
+    )
+
+    sig.alignment = (
+        WD_ALIGN_PARAGRAPH.LEFT
+    )
 
     set_rtl(sig)
 
@@ -1248,23 +1456,30 @@ def create_word_doc(df):
 
     return buf
 
+
 # ============================================================
-# 9. MULTI-DAY EXCEPTIONS MODULE
+# 9. MULTI-DAY AUDIT
 # ============================================================
 
 def run_exceptions_module():
 
-    st.markdown("""
-    <div class="v2-title">
-        <h1>📋 Multi-Day Exceptions Audit</h1>
-        <p>Alturath HR Department • Attendance Exceptions</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="v2-title">
+            <h1>📋 Multi-Day Exceptions Audit</h1>
+            <p>
+                Alturath HR Department •
+                Attendance Exceptions
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     uploaded_files = st.file_uploader(
-        'Upload Exported Excels (Row 2 Header)',
+        "Upload Exported Excels (Row 2 Header)",
         accept_multiple_files=True,
-        type=['xlsx', 'xls']
+        type=["xlsx", "xls"]
     )
 
     if uploaded_files:
@@ -1273,16 +1488,18 @@ def run_exceptions_module():
 
         for f in uploaded_files:
 
-            file_date = extract_date_from_filename(
-                f.name
+            file_date = (
+                extract_date_from_filename(
+                    f.name
+                )
             )
 
             try:
 
                 engine = (
-                    'xlrd'
-                    if f.name.endswith('.xls')
-                    else 'openpyxl'
+                    "xlrd"
+                    if f.name.lower().endswith(".xls")
+                    else "openpyxl"
                 )
 
                 df = pd.read_excel(
@@ -1297,31 +1514,36 @@ def run_exceptions_module():
                 ]
 
                 if (
-                    'Status' in df.columns
-                    and 'Name' in df.columns
+                    "Status" in df.columns
+                    and
+                    "Name" in df.columns
                 ):
 
-                    mask = df['Status'].str.contains(
-                        'Late|Absence',
+                    mask = df["Status"].str.contains(
+                        "Late|Absence",
                         case=False,
                         na=False
                     )
 
-                    day_data = df[mask].copy()
+                    day_data = df[
+                        mask
+                    ].copy()
 
-                    day_data['Report_Date'] = file_date
+                    day_data["Report_Date"] = (
+                        file_date
+                    )
 
                     all_data.append(
                         day_data[
                             [
-                                'Name',
-                                'Status',
-                                'Report_Date'
+                                "Name",
+                                "Status",
+                                "Report_Date"
                             ]
                         ]
                     )
 
-            except:
+            except Exception:
                 pass
 
         if all_data:
@@ -1334,50 +1556,65 @@ def run_exceptions_module():
             summary = (
                 combined
                 .groupby(
-                    ['Name', 'Status']
-                )['Report_Date']
+                    [
+                        "Name",
+                        "Status"
+                    ]
+                )["Report_Date"]
                 .unique()
                 .reset_index()
             )
 
-            summary['Count'] = (
-                summary['Report_Date']
+            summary["Count"] = (
+                summary["Report_Date"]
                 .apply(len)
             )
 
-            summary['Dates_Str'] = (
-                summary['Report_Date']
+            summary["Dates_Str"] = (
+                summary["Report_Date"]
                 .apply(
                     lambda x:
-                    ', '.join(sorted(x))
+                    ", ".join(
+                        sorted(x)
+                    )
                 )
             )
 
             st.dataframe(
                 summary[
                     [
-                        'Name',
-                        'Status',
-                        'Count',
-                        'Dates_Str'
+                        "Name",
+                        "Status",
+                        "Count",
+                        "Dates_Str"
                     ]
                 ],
-                use_container_width=True
+                use_container_width=True,
+                hide_index=True
             )
 
             if st.button(
-                '📄 Download Official Word Report'
+                "📄 Download Official Word Report"
             ):
 
-                report_file = create_word_doc(
-                    summary
+                report_file = (
+                    create_word_doc(
+                        summary
+                    )
                 )
 
                 st.download_button(
-                    '📥 Download .docx',
+                    "📥 Download .docx",
                     report_file,
-                    'Alturath_Exceptions_Report.docx'
+                    "Alturath_Exceptions_Report.docx"
                 )
+
+        else:
+
+            st.info(
+                "No Late or Absence records found."
+            )
+
 
 # ============================================================
 # 10. DAILY REPORT MODULE
@@ -1385,19 +1622,25 @@ def run_exceptions_module():
 
 def run_daily_report_module():
 
-    st.markdown("""
-    <div class="v2-title">
-        <h1>📊 Daily Biometric Attendance — V2</h1>
-        <p>University Of Alturath • Human Resources Department</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="v2-title">
+            <h1>📊 Daily Biometric Attendance — V2</h1>
+            <p>
+                University Of Alturath •
+                Human Resources Department
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    # --------------------------------------------------------
+    # ========================================================
     # DATE
-    # --------------------------------------------------------
+    # ========================================================
 
     use_today = st.sidebar.toggle(
-        '📅 Show Today Only',
+        "📅 Show Today Only",
         value=False
     )
 
@@ -1405,65 +1648,65 @@ def run_daily_report_module():
         date.today()
         if use_today
         else st.sidebar.date_input(
-            'Audit Date',
+            "Audit Date",
             value=date.today()
         )
     )
 
     weekdays_ar = {
-        'Monday': 'الاثنين',
-        'Tuesday': 'الثلاثاء',
-        'Wednesday': 'الاربعاء',
-        'Thursday': 'الخميس',
-        'Friday': 'الجمعة',
-        'Saturday': 'السبت',
-        'Sunday': 'الاحد'
+        "Monday": "الاثنين",
+        "Tuesday": "الثلاثاء",
+        "Wednesday": "الاربعاء",
+        "Thursday": "الخميس",
+        "Friday": "الجمعة",
+        "Saturday": "السبت",
+        "Sunday": "الاحد"
     }
 
     current_weekday_ar = weekdays_ar.get(
-        target_date.strftime('%A'),
-        ''
+        target_date.strftime("%A"),
+        ""
     )
 
     st.sidebar.info(
-        f'Audit Day: **{current_weekday_ar}**'
+        f"Audit Day: **{current_weekday_ar}**"
     )
 
-    # --------------------------------------------------------
-    # FILES
-    # --------------------------------------------------------
+    # ========================================================
+    # UPLOADS
+    # ========================================================
 
     st.sidebar.markdown(
-        '### 🚪 Attendance Sources'
+        "### 🚪 Attendance Sources"
     )
 
     f_zaqura = st.sidebar.file_uploader(
-        '🟦 Zaqura Gate',
-        type=['xlsx', 'xls']
+        "🟦 Zaqura Gate",
+        type=["xlsx", "xls"]
     )
 
     f_mhmd = st.sidebar.file_uploader(
-        '🟪 Mhmd Bn Ali Gate',
-        type=['xlsx', 'xls']
+        "🟪 Mhmd Bn Ali Gate",
+        type=["xlsx", "xls"]
     )
 
     f_app = st.sidebar.file_uploader(
-        '🟩 Mawjood App',
-        type=['xlsx', 'xls']
+        "🟩 Mawjood App",
+        type=["xlsx", "xls"]
     )
 
     st.sidebar.markdown(
-        '### 📅 HR Files'
+        "### 📅 HR Files"
     )
 
     f_weekly = st.sidebar.file_uploader(
-        '📅 Weekly Day-Off List',
-        type=['xlsx', 'xls']
+        "📅 Weekly Day-Off List",
+        type=["xlsx", "xls"]
     )
 
-    # --------------------------------------------------------
-    # PROCESS SOURCES
-    # --------------------------------------------------------
+    # ========================================================
+    # PROCESS LOGS
+    # ========================================================
 
     all_logs = []
 
@@ -1471,21 +1714,27 @@ def run_daily_report_module():
 
         gate_data = process_gate(
             f_zaqura,
-            'Zaqura Gate'
+            "Zaqura Gate"
         )
 
         if not gate_data.empty:
-            all_logs.append(gate_data)
+
+            all_logs.append(
+                gate_data
+            )
 
     if f_mhmd:
 
         gate_data = process_gate(
             f_mhmd,
-            'Mhmd Bn Ali Gate'
+            "Mhmd Bn Ali Gate"
         )
 
         if not gate_data.empty:
-            all_logs.append(gate_data)
+
+            all_logs.append(
+                gate_data
+            )
 
     if f_app:
 
@@ -1494,16 +1743,19 @@ def run_daily_report_module():
         )
 
         if not app_data.empty:
-            all_logs.append(app_data)
 
-    # --------------------------------------------------------
+            all_logs.append(
+                app_data
+            )
+
+    # ========================================================
     # WEEKLY OFF
-    # --------------------------------------------------------
+    # ========================================================
 
     df_off = pd.DataFrame(
         columns=[
-            'Name',
-            'OffDay'
+            "Name",
+            "OffDay"
         ]
     )
 
@@ -1513,37 +1765,47 @@ def run_daily_report_module():
 
             df_off = pd.read_excel(
                 f_weekly
-            ).rename(
+            )
+
+            df_off = df_off.rename(
                 columns={
-                    'الاسم الثلاثي': 'Name',
-                    'الاجازة الاسبوعية': 'OffDay'
+                    "الاسم الثلاثي": "Name",
+                    "الاجازة الاسبوعية": "OffDay"
                 }
             )
 
-            df_off['Name'] = (
-                df_off['Name']
-                .astype(str)
-                .str.strip()
-            )
+            if "Name" in df_off.columns:
 
-            df_off['OffDay'] = (
-                df_off['OffDay']
-                .astype(str)
-                .str.strip()
-            )
+                df_off["Name"] = (
+                    df_off["Name"]
+                    .astype(str)
+                    .str.strip()
+                )
 
-        except:
+            if "OffDay" in df_off.columns:
+
+                df_off["OffDay"] = (
+                    df_off["OffDay"]
+                    .astype(str)
+                    .str.strip()
+                )
+
+        except Exception as e:
+
+            st.warning(
+                f"Could not read weekly off file: {e}"
+            )
 
             df_off = pd.DataFrame(
                 columns=[
-                    'Name',
-                    'OffDay'
+                    "Name",
+                    "OffDay"
                 ]
             )
 
-    # --------------------------------------------------------
-    # BUILD
-    # --------------------------------------------------------
+    # ========================================================
+    # BUILD REPORT
+    # ========================================================
 
     if all_logs or f_weekly:
 
@@ -1558,12 +1820,12 @@ def run_daily_report_module():
 
             df_logs = pd.DataFrame(
                 columns=[
-                    'Name',
-                    'dt',
-                    'Date',
-                    'Time',
-                    'Event_Type',
-                    'Source'
+                    "Name",
+                    "dt",
+                    "Date",
+                    "Time",
+                    "Event_Type",
+                    "Source"
                 ]
             )
 
@@ -1574,30 +1836,28 @@ def run_daily_report_module():
             df_off
         )
 
-        # ----------------------------------------------------
-        # SORT
-        # ----------------------------------------------------
-
         if not df_final.empty:
 
             df_final = (
                 df_final
-                .sort_values('Name')
+                .sort_values("Name")
                 .reset_index(drop=True)
             )
 
-        # ----------------------------------------------------
+        # ====================================================
         # SUMMARY
-        # ----------------------------------------------------
+        # ====================================================
 
-        total = len(df_final)
+        total = len(
+            df_final
+        )
 
         on_time = len(
             df_final[
-                df_final['Status']
+                df_final["Status"]
                 .astype(str)
                 .str.contains(
-                    'On Time',
+                    "On Time",
                     na=False
                 )
             ]
@@ -1605,10 +1865,10 @@ def run_daily_report_module():
 
         late = len(
             df_final[
-                df_final['Status']
+                df_final["Status"]
                 .astype(str)
                 .str.contains(
-                    'Late',
+                    "Late",
                     na=False
                 )
             ]
@@ -1616,10 +1876,10 @@ def run_daily_report_module():
 
         absent = len(
             df_final[
-                df_final['Status']
+                df_final["Status"]
                 .astype(str)
                 .str.contains(
-                    'Absence',
+                    "Absence",
                     na=False
                 )
             ]
@@ -1627,10 +1887,10 @@ def run_daily_report_module():
 
         checkout_only = len(
             df_final[
-                df_final['Status']
+                df_final["Status"]
                 .astype(str)
                 .str.contains(
-                    'Check-Out Only',
+                    "Check-Out Only",
                     na=False
                 )
             ]
@@ -1639,34 +1899,43 @@ def run_daily_report_module():
         c1, c2, c3, c4, c5 = st.columns(5)
 
         with c1:
+
             st.metric(
-                '👥 Total',
+                "👥 Total",
                 total
             )
 
         with c2:
+
             st.metric(
-                '✅ On Time',
+                "✅ On Time",
                 on_time
             )
 
         with c3:
+
             st.metric(
-                '🔴 Late',
+                "🔴 Late",
                 late
             )
 
         with c4:
+
             st.metric(
-                '❌ Absence',
+                "❌ Absence",
                 absent
             )
 
         with c5:
+
             st.metric(
-                '⚠️ Check-Out Only',
+                "⚠️ Check-Out Only",
                 checkout_only
             )
+
+        # ====================================================
+        # INFO
+        # ====================================================
 
         st.markdown(
             f"""
@@ -1681,15 +1950,15 @@ def run_daily_report_module():
             unsafe_allow_html=True
         )
 
-        # ----------------------------------------------------
-        # DISPLAY
-        # ----------------------------------------------------
+        # ====================================================
+        # TABLE
+        # ====================================================
 
         display_df = df_final.copy()
 
         display_df.insert(
             0,
-            'No',
+            "No",
             range(
                 1,
                 len(display_df) + 1
@@ -1699,24 +1968,24 @@ def run_daily_report_module():
         st.dataframe(
             display_df[
                 [
-                    'No',
-                    'Name',
-                    'Check-In',
-                    'Check-Out',
-                    'Source',
-                    'Status'
+                    "No",
+                    "Name",
+                    "Check-In",
+                    "Check-Out",
+                    "Source",
+                    "Status"
                 ]
             ],
             use_container_width=True,
             hide_index=True
         )
 
-        # ----------------------------------------------------
+        # ====================================================
         # EXPORT
-        # ----------------------------------------------------
+        # ====================================================
 
         st.markdown(
-            '### 📥 Export'
+            "### 📥 Export"
         )
 
         excel_file = create_daily_excel(
@@ -1725,34 +1994,52 @@ def run_daily_report_module():
         )
 
         st.download_button(
-            label='📊 Download Daily Excel — V2',
+            label="📊 Download Daily Excel — V2",
             data=excel_file,
             file_name=(
-                f'HR_Report_'
-                f'{target_date.strftime("%Y-%m-%d")}'
-                f'_V2.xlsx'
+                f"HR_Report_"
+                f"{target_date.strftime('%Y-%m-%d')}"
+                f"_V2.xlsx"
             ),
             mime=(
-                'application/vnd.openxmlformats-officedocument'
-                '.spreadsheetml.sheet'
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
             )
         )
 
+    else:
+
+        st.markdown(
+            """
+            <div class="v2-info">
+                👋 Upload at least one attendance file
+                or the weekly day-off file to generate
+                the report.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+
 # ============================================================
-# 11. MAIN APP
+# 11. MAIN
 # ============================================================
 
 st.set_page_config(
-    page_title='Alturath HR System V2',
-    page_icon='🏛️',
-    layout='wide'
+    page_title="Alturath HR System V2",
+    page_icon="🏛️",
+    layout="wide"
 )
 
 apply_v2_theme()
 
-# Sidebar logo
+
+# ============================================================
+# SIDEBAR
+# ============================================================
+
 st.sidebar.image(
-    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRfTMmtmrsxgUBnlEb0xB0ClMbFZmj_L5Ap5Q&s'
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRfTMmtmrsxGUBnlEb0xB0ClMbFZmj_L5Ap5Q&s"
 )
 
 st.sidebar.markdown(
@@ -1777,15 +2064,21 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
+
 app_mode = st.sidebar.selectbox(
-    'Choose App Mode',
+    "Choose App Mode",
     [
-        '📊 Daily Report Tool',
-        '📋 Multi-Day Audit Tool'
+        "📊 Daily Report Tool",
+        "📋 Multi-Day Audit Tool"
     ]
 )
 
-if app_mode == '📊 Daily Report Tool':
+
+# ============================================================
+# RUN
+# ============================================================
+
+if app_mode == "📊 Daily Report Tool":
 
     run_daily_report_module()
 
