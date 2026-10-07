@@ -25,10 +25,10 @@ LOCAL_LOGO = "logo(1).png"
 # ============================================================
 
 st.set_page_config(
-    page_title="Alturath HR - Biometric Attendance",
-    page_icon="◈",
-    layout="wide",
-    initial_sidebar_state="expanded",
+    page_title="Alturath HR - Biometric Attendance",
+    page_icon="◈",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 # ============================================================
