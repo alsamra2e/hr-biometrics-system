@@ -2286,9 +2286,8 @@ else:
 
 st.markdown(
     """
-<div class="footer">
-    ALTURATH HR BIOMETRICS SYSTEM • V2
-</div>
-    """,
+    <div class="top-brand-title">ALTURATH UNIVERSITY</div>
+    <div class="top-brand-subtitle">Human Resources • Biometric Attendance</div>
+""",
     unsafe_allow_html=True,
 )
