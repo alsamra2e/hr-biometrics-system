@@ -10,48 +10,28 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
 from io import BytesIO
-from datetime import datetime, date, time, timedelta
+from datetime import date, time, timedelta
 
 
 # ============================================================
-# ALTURATH HR SYSTEM — V2
+# ALTURATH HR BIOMETRICS SYSTEM V2
 # ============================================================
 
 
 # ============================================================
-# 1. GLOBAL UTILITIES
+# 1. PAGE CONFIG
 # ============================================================
 
-def set_rtl(paragraph):
-    p = paragraph._element
-    pPr = p.get_or_add_pPr()
-
-    bidi = pPr.find(qn('w:bidi'))
-
-    if bidi is None:
-        bidi = OxmlElement('w:bidi')
-        pPr.append(bidi)
-
-
-def set_table_rtl(table):
-    tbl_pr = table._element.xpath('w:tblPr')
-
-    if tbl_pr:
-        bidi = OxmlElement('w:bidiVisual')
-        tbl_pr[0].append(bidi)
-
-
-def extract_date_from_filename(filename):
-    match = re.search(r'\d{4}-\d{2}-\d{2}', filename)
-
-    if match:
-        return match.group(0)
-
-    return str(date.today())
+st.set_page_config(
+    page_title="Alturath HR • Biometric System",
+    page_icon="◈",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 
 # ============================================================
-# 2. V2 WEBSITE THEME
+# 2. FUTURISTIC MINIMAL THEME
 # ============================================================
 
 def apply_v2_theme():
@@ -60,136 +40,333 @@ def apply_v2_theme():
         """
         <style>
 
-        .stApp {
-            background:
-                linear-gradient(
-                    135deg,
-                    #f8fafc 0%,
-                    #eef2ff 45%,
-                    #f0fdf4 100%
-                );
+        /* ====================================================
+           GLOBAL
+        ==================================================== */
+
+        @import url(
+            'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
+        );
+
+        html, body, [class*="css"] {
+            font-family: 'Inter', sans-serif;
         }
 
-        section[data-testid="stSidebar"] {
+        .stApp {
             background:
-                linear-gradient(
-                    180deg,
-                    #172554 0%,
-                    #1e3a8a 45%,
-                    #312e81 100%
-                );
+                radial-gradient(
+                    circle at 80% 0%,
+                    rgba(59,130,246,0.08),
+                    transparent 28%
+                ),
+                radial-gradient(
+                    circle at 0% 100%,
+                    rgba(16,185,129,0.05),
+                    transparent 25%
+                ),
+                #f7f8fa;
+        }
+
+        /* ====================================================
+           SIDEBAR
+        ==================================================== */
+
+        section[data-testid="stSidebar"] {
+            background: #0b1120;
+            border-right: 1px solid #1e293b;
         }
 
         section[data-testid="stSidebar"] * {
-            color: white !important;
+            color: #e2e8f0;
         }
 
         section[data-testid="stSidebar"] .stSelectbox label,
         section[data-testid="stSidebar"] .stFileUploader label,
         section[data-testid="stSidebar"] .stDateInput label {
-            color: white !important;
+            color: #94a3b8 !important;
+            font-size: 12px;
             font-weight: 600;
         }
 
-        .v2-title {
-            background:
-                linear-gradient(
-                    135deg,
-                    #1e3a8a,
-                    #4f46e5,
-                    #0891b2
-                );
-
-            color: white;
-            padding: 24px 28px;
-            border-radius: 18px;
-            margin-bottom: 20px;
-
-            box-shadow:
-                0 10px 25px rgba(30, 58, 138, 0.20);
+        section[data-testid="stSidebar"] .stFileUploader {
+            margin-bottom: 8px;
         }
 
-        .v2-title h1 {
-            margin: 0;
-            font-size: 32px;
-            font-weight: 800;
+        /* ====================================================
+           BRAND
+        ==================================================== */
+
+        .brand {
+            padding: 8px 4px 24px 4px;
         }
 
-        .v2-title p {
-            margin: 5px 0 0 0;
-            opacity: 0.90;
-            font-size: 15px;
-        }
+        .brand-mark {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
 
-        .v2-info {
-            background:
-                linear-gradient(
-                    135deg,
-                    #dbeafe,
-                    #e0e7ff
-                );
-
-            border-left: 5px solid #2563eb;
-
-            padding: 14px 18px;
-            border-radius: 10px;
-
-            color: #1e3a8a;
-            font-weight: 600;
-
-            margin-bottom: 18px;
-        }
-
-        .stButton > button {
-            border-radius: 10px;
-            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
             background:
                 linear-gradient(
                     135deg,
                     #2563eb,
-                    #4f46e5
+                    #06b6d4
                 );
 
             color: white;
-            font-weight: 700;
+            font-size: 20px;
+            font-weight: 800;
 
-            padding: 8px 18px;
+            box-shadow:
+                0 8px 24px rgba(37,99,235,0.25);
+
+            margin-bottom: 12px;
         }
 
-        .stButton > button:hover {
+        .brand-name {
+            color: #f8fafc;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+        }
+
+        .brand-sub {
+            color: #64748b;
+            font-size: 11px;
+            margin-top: 3px;
+        }
+
+        /* ====================================================
+           HEADER
+        ==================================================== */
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+
+            background: #0f172a;
+
+            border: 1px solid #1e293b;
+            border-radius: 20px;
+
+            padding: 26px 30px;
+            margin-bottom: 22px;
+
+            box-shadow:
+                0 15px 40px rgba(15,23,42,0.08);
+        }
+
+        .hero:after {
+            content: "";
+
+            position: absolute;
+
+            width: 240px;
+            height: 240px;
+
+            right: -100px;
+            top: -120px;
+
+            border-radius: 50%;
+
             background:
-                linear-gradient(
-                    135deg,
-                    #1d4ed8,
-                    #4338ca
+                radial-gradient(
+                    circle,
+                    rgba(37,99,235,0.35),
+                    transparent 68%
                 );
-
-            color: white;
         }
 
+        .hero-label {
+            color: #60a5fa;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            margin-bottom: 7px;
+        }
+
+        .hero-title {
+            color: #f8fafc;
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin: 0;
+        }
+
+        .hero-description {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-top: 7px;
+        }
+
+        /* ====================================================
+           INFO BAR
+        ==================================================== */
+
+        .date-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            background: #ffffff;
+
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+
+            padding: 13px 17px;
+
+            margin-bottom: 18px;
+
+            box-shadow:
+                0 5px 18px rgba(15,23,42,0.04);
+        }
+
+        .date-main {
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .date-sub {
+            color: #64748b;
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .checkout-badge {
+            background: #eff6ff;
+            color: #2563eb;
+
+            border: 1px solid #dbeafe;
+
+            padding: 6px 10px;
+            border-radius: 999px;
+
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* ====================================================
+           METRICS
+        ==================================================== */
+
+        div[data-testid="stMetric"] {
+            background: #ffffff;
+
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+
+            padding: 12px 15px;
+
+            box-shadow:
+                0 5px 18px rgba(15,23,42,0.035);
+        }
+
+        div[data-testid="stMetricLabel"] {
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        div[data-testid="stMetricValue"] {
+            color: #0f172a;
+            font-weight: 800;
+        }
+
+        /* ====================================================
+           BUTTONS
+        ==================================================== */
+
+        .stButton > button,
         .stDownloadButton > button {
-            border-radius: 10px;
 
-            background:
-                linear-gradient(
-                    135deg,
-                    #059669,
-                    #0d9488
-                );
+            border-radius: 9px;
+
+            border: 1px solid #2563eb;
+
+            background: #2563eb;
 
             color: white;
+
             font-weight: 700;
 
-            border: none;
+            transition: all 0.18s ease;
         }
+
+        .stButton > button:hover,
+        .stDownloadButton > button:hover {
+
+            background: #1d4ed8;
+
+            border-color: #1d4ed8;
+
+            transform: translateY(-1px);
+
+            box-shadow:
+                0 7px 18px rgba(37,99,235,0.18);
+        }
+
+        /* ====================================================
+           DATAFRAME
+        ==================================================== */
 
         div[data-testid="stDataFrame"] {
-            border-radius: 12px;
+
+            border: 1px solid #e2e8f0;
+
+            border-radius: 14px;
+
             overflow: hidden;
 
             box-shadow:
-                0 5px 20px rgba(15,23,42,0.08);
+                0 7px 25px rgba(15,23,42,0.05);
+        }
+
+        /* ====================================================
+           SECTION TITLE
+        ==================================================== */
+
+        .section-title {
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 800;
+
+            margin-top: 24px;
+            margin-bottom: 10px;
+        }
+
+        /* ====================================================
+           STATUS CARDS
+        ==================================================== */
+
+        .status-note {
+            border-radius: 12px;
+
+            padding: 12px 15px;
+
+            background: #ffffff;
+
+            border: 1px solid #e2e8f0;
+
+            color: #475569;
+
+            font-size: 12px;
+        }
+
+        /* ====================================================
+           FOOTER
+        ==================================================== */
+
+        .footer {
+            color: #94a3b8;
+            text-align: center;
+
+            font-size: 10px;
+
+            padding: 25px 0 10px 0;
         }
 
         </style>
@@ -198,56 +375,95 @@ def apply_v2_theme():
     )
 
 
+apply_v2_theme()
+
+
 # ============================================================
-# 3. EVENT CLASSIFICATION
+# 3. GLOBAL UTILITIES
+# ============================================================
+
+def set_rtl(paragraph):
+
+    p = paragraph._element
+    pPr = p.get_or_add_pPr()
+
+    bidi = pPr.find(qn("w:bidi"))
+
+    if bidi is None:
+        bidi = OxmlElement("w:bidi")
+        pPr.append(bidi)
+
+
+def set_table_rtl(table):
+
+    tbl_pr = table._element.xpath("w:tblPr")
+
+    if tbl_pr:
+
+        bidi = OxmlElement("w:bidiVisual")
+
+        tbl_pr[0].append(bidi)
+
+
+def extract_date_from_filename(filename):
+
+    match = re.search(
+        r"\d{4}-\d{2}-\d{2}",
+        filename
+    )
+
+    if match:
+
+        return match.group(0)
+
+    return str(date.today())
+
+
+# ============================================================
+# 4. EVENT CLASSIFICATION
 # ============================================================
 
 def classify_gate_event(event_value, punch_datetime):
+
     """
-    Attendance rules:
+    Actual biometric rules:
 
-    دخول(1) = Check-In
+        دخول(1)             -> Check-In
 
-    خروج(2) before 12:00 = Check-In
-        This is the morning wrong-button correction.
+        خروج(2) before 12   -> Check-In
+                              (wrong button / morning punch)
 
-    خروج(2) at/after 12:00 = Check-Out
+        خروج(2) 12:00+      -> Check-Out
     """
 
-    event = str(event_value).strip()
+    event = str(
+        event_value
+    ).strip()
 
     punch_time = punch_datetime.time()
 
-    # --------------------------------------------------------
     # دخول(1)
-    # --------------------------------------------------------
-
     if "دخول" in event:
 
         return "Check-In"
 
-    # --------------------------------------------------------
     # خروج(2)
-    # --------------------------------------------------------
-
     if "خروج" in event:
 
-        # Morning checkout button used accidentally.
         if punch_time < time(12, 0):
 
             return "Check-In"
 
-        # Normal checkout.
         return "Check-Out"
 
     return None
 
 
 # ============================================================
-# 4. GATE PROCESSING
+# 5. PROCESS GATE
 # ============================================================
 
-def process_gate(file, g_name):
+def process_gate(file, gate_name):
 
     try:
 
@@ -268,7 +484,7 @@ def process_gate(file, g_name):
         ]
 
         # ----------------------------------------------------
-        # Find Name column
+        # Name
         # ----------------------------------------------------
 
         if "الاسم" in df.columns:
@@ -282,44 +498,40 @@ def process_gate(file, g_name):
         else:
 
             st.warning(
-                f"{g_name}: Could not find the name column."
+                f"{gate_name}: الاسم column not found."
             )
 
             return pd.DataFrame()
 
         # ----------------------------------------------------
-        # Required columns
+        # Time
         # ----------------------------------------------------
 
         if "الوقت" not in df.columns:
 
             st.warning(
-                f"{g_name}: Could not find the الوقت column."
+                f"{gate_name}: الوقت column not found."
             )
 
             return pd.DataFrame()
+
+        # ----------------------------------------------------
+        # Event
+        # ----------------------------------------------------
 
         if "Event" not in df.columns:
 
             st.warning(
-                f"{g_name}: Could not find the Event column."
+                f"{gate_name}: Event column not found."
             )
 
             return pd.DataFrame()
-
-        # ----------------------------------------------------
-        # Name
-        # ----------------------------------------------------
 
         df["Name"] = (
             df[name_col]
             .astype(str)
             .str.strip()
         )
-
-        # ----------------------------------------------------
-        # Datetime
-        # ----------------------------------------------------
 
         df["dt"] = pd.to_datetime(
             df["الوقت"],
@@ -329,16 +541,10 @@ def process_gate(file, g_name):
         df = df[
             df["dt"].notna()
             &
-            df["Name"].notna()
-            &
             (df["Name"] != "")
             &
             (df["Name"] != "nan")
         ].copy()
-
-        # ----------------------------------------------------
-        # Event type
-        # ----------------------------------------------------
 
         df["Event_Type"] = df.apply(
             lambda row:
@@ -353,17 +559,15 @@ def process_gate(file, g_name):
             df["Event_Type"].notna()
         ].copy()
 
-        # ----------------------------------------------------
-        # Date / Time
-        # ----------------------------------------------------
-
-        df["Date"] = df["dt"].dt.date
-
-        df["Time"] = df["dt"].dt.strftime(
-            "%H:%M"
+        df["Date"] = (
+            df["dt"].dt.date
         )
 
-        df["Source"] = g_name
+        df["Time"] = (
+            df["dt"].dt.strftime("%H:%M")
+        )
+
+        df["Source"] = gate_name
 
         return df[
             [
@@ -379,14 +583,14 @@ def process_gate(file, g_name):
     except Exception as e:
 
         st.error(
-            f"Error processing {g_name}: {e}"
+            f"Error processing {gate_name}: {e}"
         )
 
         return pd.DataFrame()
 
 
 # ============================================================
-# 5. MAWJOOD APP PROCESSING
+# 6. PROCESS MAWJOOD APP
 # ============================================================
 
 def process_app(file):
@@ -431,7 +635,7 @@ def process_app(file):
                             "Date": dt.date(),
                             "Time": dt.strftime("%H:%M"),
                             "Event_Type": "Check-In",
-                            "Source": "App"
+                            "Source": "Mawjood App"
                         }
                     )
 
@@ -454,6 +658,7 @@ def process_app(file):
             if col in df.columns:
 
                 checkout_col = col
+
                 break
 
         if checkout_col:
@@ -474,11 +679,13 @@ def process_app(file):
                             "Date": dt.date(),
                             "Time": dt.strftime("%H:%M"),
                             "Event_Type": "Check-Out",
-                            "Source": "App"
+                            "Source": "Mawjood App"
                         }
                     )
 
-        return pd.DataFrame(result)
+        return pd.DataFrame(
+            result
+        )
 
     except Exception as e:
 
@@ -490,7 +697,7 @@ def process_app(file):
 
 
 # ============================================================
-# 6. BUILD DAILY ATTENDANCE
+# 7. BUILD DAILY HR REPORT
 # ============================================================
 
 def build_daily_attendance(
@@ -500,10 +707,23 @@ def build_daily_attendance(
     df_off
 ):
 
+    """
+    IMPORTANT HR SUBMISSION RULE:
+
+    If report date = 7 Oct:
+
+        Check-In  -> 7 Oct
+        Check-Out -> 6 Oct
+
+    This is intentional because HR receives the current day's
+    check-in report while the checkout belongs to the previous
+    working day.
+    """
+
     master_names = set()
 
     # --------------------------------------------------------
-    # Names from attendance
+    # Names from logs
     # --------------------------------------------------------
 
     if not df_logs.empty:
@@ -517,7 +737,7 @@ def build_daily_attendance(
         )
 
     # --------------------------------------------------------
-    # Names from weekly off list
+    # Names from weekly off
     # --------------------------------------------------------
 
     if not df_off.empty:
@@ -537,17 +757,16 @@ def build_daily_attendance(
         - timedelta(days=1)
     )
 
-    # ========================================================
-    # ONE EMPLOYEE AT A TIME
-    # ========================================================
-
-    for name in sorted(master_names):
+    for name in sorted(
+        master_names
+    ):
 
         person = df_logs[
             df_logs["Name"]
             .astype(str)
             .str.strip()
-            == str(name).strip()
+            ==
+            str(name).strip()
         ].copy()
 
         person = person.sort_values(
@@ -555,7 +774,7 @@ def build_daily_attendance(
         )
 
         # ====================================================
-        # TODAY'S CHECK-IN
+        # TODAY = CHECK-IN
         # ====================================================
 
         today_checkins = person[
@@ -565,11 +784,11 @@ def build_daily_attendance(
         ].copy()
 
         # ====================================================
-        # TODAY'S CHECK-OUT
+        # YESTERDAY = CHECK-OUT
         # ====================================================
 
-        today_checkouts = person[
-            (person["Date"] == target_date)
+        yesterday_checkouts = person[
+            (person["Date"] == previous_date)
             &
             (person["Event_Type"] == "Check-Out")
         ].copy()
@@ -579,24 +798,22 @@ def build_daily_attendance(
         # ====================================================
 
         check_in = "-"
-        check_in_dt = None
         check_in_source = "-"
 
         if not today_checkins.empty:
 
-            # Earliest Check-In
-            selected_checkin = (
+            first_checkin = (
                 today_checkins
                 .sort_values("dt")
                 .iloc[0]
             )
 
-            check_in = selected_checkin["Time"]
-
-            check_in_dt = selected_checkin["dt"]
+            check_in = (
+                first_checkin["Time"]
+            )
 
             check_in_source = (
-                selected_checkin["Source"]
+                first_checkin["Source"]
             )
 
         # ====================================================
@@ -604,154 +821,23 @@ def build_daily_attendance(
         # ====================================================
 
         check_out = "-"
-        check_out_dt = None
         check_out_source = "-"
 
-        if not today_checkouts.empty:
+        if not yesterday_checkouts.empty:
 
-            if check_in_dt is not None:
+            last_checkout = (
+                yesterday_checkouts
+                .sort_values("dt")
+                .iloc[-1]
+            )
 
-                # Find checkouts after check-in.
-                valid_checkouts = today_checkouts[
-                    today_checkouts["dt"]
-                    > check_in_dt
-                ]
-
-                if not valid_checkouts.empty:
-
-                    selected_checkout = (
-                        valid_checkouts
-                        .sort_values("dt")
-                        .iloc[-1]
-                    )
-
-                else:
-
-                    selected_checkout = (
-                        today_checkouts
-                        .sort_values("dt")
-                        .iloc[-1]
-                    )
-
-            else:
-
-                # Person has a checkout but no check-in.
-                selected_checkout = (
-                    today_checkouts
-                    .sort_values("dt")
-                    .iloc[-1]
-                )
-
-            check_out = selected_checkout["Time"]
-
-            check_out_dt = selected_checkout["dt"]
+            check_out = (
+                last_checkout["Time"]
+            )
 
             check_out_source = (
-                selected_checkout["Source"]
+                last_checkout["Source"]
             )
-
-        # ====================================================
-        # OVERNIGHT CHECKOUT INFORMATION
-        # ====================================================
-
-        # Previous day's Check-In
-        previous_checkins = person[
-            (person["Date"] == previous_date)
-            &
-            (person["Event_Type"] == "Check-In")
-        ]
-
-        # Today's early-morning Check-Out
-        early_checkouts = person[
-            (person["Date"] == target_date)
-            &
-            (person["Event_Type"] == "Check-Out")
-            &
-            (
-                person["dt"].dt.time
-                < time(12, 0)
-            )
-        ]
-
-        # This is intentionally NOT added to today's record.
-        #
-        # Example:
-        #
-        # 2026-10-06 20:00 دخول(1)
-        # 2026-10-07 02:00 خروج(2)
-        #
-        # The 02:00 checkout belongs to 2026-10-06.
-        #
-        # To display that checkout when 2026-10-06 is selected,
-        # we handle it below in the previous-day matching logic.
-
-        # ====================================================
-        # IF TARGET DATE HAS CHECK-IN, LOOK FOR OVERNIGHT
-        # CHECKOUT ON THE NEXT DAY
-        # ====================================================
-
-        next_date = (
-            target_date
-            + timedelta(days=1)
-        )
-
-        next_day_early_checkouts = person[
-            (person["Date"] == next_date)
-            &
-            (person["Event_Type"] == "Check-Out")
-            &
-            (
-                person["dt"].dt.time
-                < time(12, 0)
-            )
-        ]
-
-        if (
-            check_in_dt is not None
-            and
-            not next_day_early_checkouts.empty
-        ):
-
-            # Only attach a next-day checkout if it is
-            # reasonably close to the previous day's check-in.
-            #
-            # Maximum 18 hours from Check-In.
-
-            valid_overnight = (
-                next_day_early_checkouts[
-                    (
-                        next_day_early_checkouts["dt"]
-                        > check_in_dt
-                    )
-                    &
-                    (
-                        next_day_early_checkouts["dt"]
-                        <=
-                        check_in_dt
-                        + timedelta(hours=18)
-                    )
-                ]
-            )
-
-            if not valid_overnight.empty:
-
-                selected_checkout = (
-                    valid_overnight
-                    .sort_values("dt")
-                    .iloc[-1]
-                )
-
-                check_out = (
-                    selected_checkout["Time"]
-                )
-
-                check_out_dt = (
-                    selected_checkout["dt"]
-                )
-
-                check_out_source = (
-                    selected_checkout["Source"]
-                )
 
         # ====================================================
         # WEEKLY OFF
@@ -778,30 +864,6 @@ def build_daily_attendance(
             )
 
         # ====================================================
-        # FINAL ROW
-        # ====================================================
-
-        row = {
-            "Name": name,
-            "Check-In": check_in,
-            "Check-Out": check_out,
-            "Source": "-",
-            "Status": ""
-        }
-
-        # ----------------------------------------------------
-        # Source
-        # ----------------------------------------------------
-
-        if check_in_source != "-":
-
-            row["Source"] = check_in_source
-
-        elif check_out_source != "-":
-
-            row["Source"] = check_out_source
-
-        # ====================================================
         # STATUS
         # ====================================================
 
@@ -809,37 +871,69 @@ def build_daily_attendance(
 
             if check_in > "08:35":
 
-                row["Status"] = "🔴 Late"
+                status = "🔴 Late"
 
             else:
 
-                row["Status"] = "✅ On Time"
-
-        elif check_out != "-":
-
-            row["Status"] = (
-                "⚠️ Check-Out Only"
-            )
+                status = "🟢 On Time"
 
         elif is_off:
 
-            row["Status"] = (
-                "🟡 Weekly Off"
-            )
+            status = "🟡 Weekly Off"
+
+        elif check_out != "-":
+
+            status = "🟠 Check-Out Only"
 
         else:
 
-            row["Status"] = (
-                "❌ Absence"
+            status = "🔴 Absence"
+
+        # ====================================================
+        # SOURCE
+        # ====================================================
+
+        source_parts = []
+
+        if check_in_source != "-":
+
+            source_parts.append(
+                check_in_source
             )
 
-        final_data.append(row)
+        if check_out_source != "-":
 
-    return pd.DataFrame(final_data)
+            if check_out_source not in source_parts:
+
+                source_parts.append(
+                    check_out_source
+                )
+
+        source = " + ".join(
+            source_parts
+        )
+
+        if not source:
+
+            source = "-"
+
+        final_data.append(
+            {
+                "Name": name,
+                "Check-In": check_in,
+                "Check-Out": check_out,
+                "Source": source,
+                "Status": status
+            }
+        )
+
+    return pd.DataFrame(
+        final_data
+    )
 
 
 # ============================================================
-# 7. EXCEL EXPORT
+# 8. SMALL / CLEAN EXCEL EXPORT
 # ============================================================
 
 def create_daily_excel(
@@ -847,226 +941,226 @@ def create_daily_excel(
     target_date
 ):
 
+    """
+    Lightweight LTR Excel export.
+
+    No RTL.
+    No unnecessary images.
+    No huge formatting.
+    No print-area configuration.
+    """
+
     buf = BytesIO()
 
-    with pd.ExcelWriter(
-        buf,
-        engine="xlsxwriter"
-    ) as writer:
-
-        workbook = writer.book
-
-        worksheet = workbook.add_worksheet(
-            "Audit"
-        )
-
-        writer.sheets["Audit"] = worksheet
-
-        # ====================================================
-        # COLORS
-        # ====================================================
-
-        dark_blue = "#172554"
-        blue = "#2563EB"
-
-        green_bg = "#DCFCE7"
-        green_text = "#047857"
-
-        red_bg = "#FEE2E2"
-        red_text = "#B91C1C"
-
-        yellow_bg = "#FEF3C7"
-        yellow_text = "#92400E"
-
-        orange_bg = "#FFEDD5"
-        orange_text = "#9A3412"
-
-        white = "#FFFFFF"
-        black = "#000000"
-
-        # ====================================================
-        # FORMATS
-        # ====================================================
-
-        title_format = workbook.add_format(
-            {
-                "bold": True,
-                "font_size": 16,
-                "font_color": white,
-                "bg_color": dark_blue,
-                "align": "center",
-                "valign": "vcenter",
-                "border": 1,
-                "border_color": black
-            }
-        )
-
-        header_format = workbook.add_format(
-            {
-                "bold": True,
-                "font_size": 11,
-                "font_color": white,
-                "bg_color": blue,
-                "align": "center",
-                "valign": "vcenter",
-                "border": 1,
-                "border_color": black
-            }
-        )
-
-        cell_format = workbook.add_format(
-            {
-                "font_size": 10,
-                "align": "center",
-                "valign": "vcenter",
-                "border": 1,
-                "border_color": black
-            }
-        )
-
-        name_format = workbook.add_format(
-            {
-                "font_size": 10,
-                "align": "center",
-                "valign": "vcenter",
-                "border": 1,
-                "border_color": black,
-                "reading_order": 2
-            }
-        )
-
-        ontime_format = workbook.add_format(
-            {
-                "font_size": 10,
-                "font_color": green_text,
-                "bold": True,
-                "align": "center",
-                "valign": "vcenter",
-                "border": 1,
-                "border_color": black,
-                "bg_color": green_bg
-            }
-        )
-
-        late_format = workbook.add_format(
-            {
-                "font_size": 10,
-                "font_color": red_text,
-                "bold": True,
-                "align": "center",
-                "valign": "vcenter",
-                "border": 1,
-                "border_color": black,
-                "bg_color": red_bg
-            }
-        )
-
-        off_format = workbook.add_format(
-            {
-                "font_size": 10,
-                "font_color": yellow_text,
-                "bold": True,
-                "align": "center",
-                "valign": "vcenter",
-                "border": 1,
-                "border_color": black,
-                "bg_color": yellow_bg
-            }
-        )
-
-        absence_format = workbook.add_format(
-            {
-                "font_size": 10,
-                "font_color": red_text,
-                "bold": True,
-                "align": "center",
-                "valign": "vcenter",
-                "border": 1,
-                "border_color": black,
-                "bg_color": red_bg
-            }
-        )
-
-        checkout_only_format = workbook.add_format(
-            {
-                "font_size": 10,
-                "font_color": orange_text,
-                "bold": True,
-                "align": "center",
-                "valign": "vcenter",
-                "border": 1,
-                "border_color": black,
-                "bg_color": orange_bg
-            }
-        )
-
-        # ====================================================
-        # RTL
-        # ====================================================
-
-        worksheet.right_to_left()
-
-        # ====================================================
-        # TITLE
-        # ====================================================
-
-        title = (
-            "جامعة التراث - الموقف اليومي - "
-            f"{target_date.strftime('%Y/%m/%d')}"
-        )
-
-        worksheet.merge_range(
-            "A1:F1",
-            title,
-            title_format
-        )
-
-        worksheet.set_row(
-            0,
-            32
-        )
-
-        # ====================================================
-        # HEADER
-        #
-        # Row 2 remains the header intentionally.
-        # ====================================================
-
-        headers = [
-            "No",
+    # Keep only the fields needed by HR.
+    export_df = df_final[
+        [
             "Name",
             "Check-In",
             "Check-Out",
             "Source",
             "Status"
         ]
+    ].copy()
 
-        for col, header in enumerate(headers):
+    with pd.ExcelWriter(
+        buf,
+        engine="xlsxwriter",
+        engine_kwargs={
+            "options": {
+                "strings_to_urls": False
+            }
+        }
+    ) as writer:
+
+        workbook = writer.book
+
+        worksheet = workbook.add_worksheet(
+            "Attendance"
+        )
+
+        writer.sheets[
+            "Attendance"
+        ] = worksheet
+
+        # ----------------------------------------------------
+        # Minimal formats
+        # ----------------------------------------------------
+
+        title_format = workbook.add_format(
+            {
+                "bold": True,
+                "font_size": 14,
+                "font_color": "#FFFFFF",
+                "bg_color": "#0F172A",
+                "align": "center",
+                "valign": "vcenter"
+            }
+        )
+
+        subtitle_format = workbook.add_format(
+            {
+                "font_size": 9,
+                "font_color": "#64748B",
+                "align": "center",
+                "valign": "vcenter"
+            }
+        )
+
+        header_format = workbook.add_format(
+            {
+                "bold": True,
+                "font_color": "#FFFFFF",
+                "bg_color": "#2563EB",
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": "#CBD5E1"
+            }
+        )
+
+        cell_format = workbook.add_format(
+            {
+                "align": "center",
+                "valign": "vcenter",
+                "border": 1,
+                "border_color": "#E2E8F0"
+            }
+        )
+
+        # ----------------------------------------------------
+        # IMPORTANT:
+        # LTR export. Do NOT use right_to_left().
+        # ----------------------------------------------------
+
+        # Title
+        worksheet.merge_range(
+            "A1:F1",
+            (
+                "ALTURATH UNIVERSITY • "
+                "DAILY ATTENDANCE"
+            ),
+            title_format
+        )
+
+        worksheet.merge_range(
+            "A2:F2",
+            (
+                f"Check-In: "
+                f"{target_date.strftime('%d %b %Y')}"
+                f"   |   "
+                f"Check-Out: "
+                f"{(target_date - timedelta(days=1)).strftime('%d %b %Y')}"
+            ),
+            subtitle_format
+        )
+
+        worksheet.set_row(
+            0,
+            25
+        )
+
+        worksheet.set_row(
+            1,
+            20
+        )
+
+        # ----------------------------------------------------
+        # Headers
+        # ----------------------------------------------------
+
+        headers = [
+            "No.",
+            "Name",
+            f"Check-In\n({target_date.strftime('%d %b')})",
+            (
+                "Check-Out\n"
+                f"({(target_date - timedelta(days=1)).strftime('%d %b')})"
+            ),
+            "Source",
+            "Status"
+        ]
+
+        for col, header in enumerate(
+            headers
+        ):
 
             worksheet.write(
-                1,
+                2,
                 col,
                 header,
                 header_format
             )
 
         worksheet.set_row(
-            1,
-            26
+            2,
+            32
         )
 
-        # ====================================================
-        # COLUMN WIDTHS
-        # ====================================================
+        # ----------------------------------------------------
+        # Data
+        # ----------------------------------------------------
+
+        for i, (_, row) in enumerate(
+            export_df.iterrows()
+        ):
+
+            excel_row = i + 3
+
+            worksheet.write(
+                excel_row,
+                0,
+                i + 1,
+                cell_format
+            )
+
+            worksheet.write(
+                excel_row,
+                1,
+                str(row["Name"]),
+                cell_format
+            )
+
+            worksheet.write(
+                excel_row,
+                2,
+                str(row["Check-In"]),
+                cell_format
+            )
+
+            worksheet.write(
+                excel_row,
+                3,
+                str(row["Check-Out"]),
+                cell_format
+            )
+
+            worksheet.write(
+                excel_row,
+                4,
+                str(row["Source"]),
+                cell_format
+            )
+
+            worksheet.write(
+                excel_row,
+                5,
+                str(row["Status"]),
+                cell_format
+            )
+
+        # ----------------------------------------------------
+        # Compact widths
+        # ----------------------------------------------------
 
         worksheet.set_column(
             "A:A",
-            8
+            6
         )
 
         worksheet.set_column(
             "B:B",
-            34
+            30
         )
 
         worksheet.set_column(
@@ -1076,105 +1170,20 @@ def create_daily_excel(
 
         worksheet.set_column(
             "E:E",
-            24
+            20
         )
 
         worksheet.set_column(
             "F:F",
-            22
+            17
         )
 
-        # ====================================================
-        # DATA
-        # ====================================================
-
-        for row_idx, row in df_final.iterrows():
-
-            excel_row = row_idx + 2
-
-            # Number
-            worksheet.write(
-                excel_row,
-                0,
-                row_idx + 1,
-                cell_format
-            )
-
-            # Name
-            worksheet.write(
-                excel_row,
-                1,
-                str(row["Name"]),
-                name_format
-            )
-
-            # Check-In
-            worksheet.write(
-                excel_row,
-                2,
-                str(row["Check-In"]),
-                cell_format
-            )
-
-            # Check-Out
-            worksheet.write(
-                excel_row,
-                3,
-                str(row["Check-Out"]),
-                cell_format
-            )
-
-            # Source
-            worksheet.write(
-                excel_row,
-                4,
-                str(row["Source"]),
-                cell_format
-            )
-
-            # Status
-            status = str(
-                row["Status"]
-            )
-
-            if "On Time" in status:
-
-                status_format = ontime_format
-
-            elif "Late" in status:
-
-                status_format = late_format
-
-            elif "Weekly Off" in status:
-
-                status_format = off_format
-
-            elif "Check-Out Only" in status:
-
-                status_format = checkout_only_format
-
-            else:
-
-                status_format = absence_format
-
-            worksheet.write(
-                excel_row,
-                5,
-                status,
-                status_format
-            )
-
-            worksheet.set_row(
-                excel_row,
-                24
-            )
-
-        # ====================================================
-        # EXCEL VIEW
-        # ====================================================
+        # ----------------------------------------------------
+        # Lightweight worksheet settings
+        # ----------------------------------------------------
 
         worksheet.freeze_panes(
-            2,
+            3,
             0
         )
 
@@ -1182,32 +1191,13 @@ def create_daily_excel(
             2
         )
 
-        # Landscape printing
-        worksheet.set_landscape()
-
-        worksheet.fit_to_pages(
-            1,
-            0
-        )
-
-        worksheet.set_margins(
-            left=0.25,
-            right=0.25,
-            top=0.40,
-            bottom=0.40
-        )
-
-        # IMPORTANT:
-        # No set_print_area() here because some
-        # XlsxWriter versions don't support it properly.
-
     buf.seek(0)
 
     return buf.getvalue()
 
 
 # ============================================================
-# 8. WORD REPORT
+# 9. WORD REPORT
 # ============================================================
 
 def create_word_doc(df):
@@ -1229,8 +1219,7 @@ def create_word_doc(df):
     # --------------------------------------------------------
 
     r = (
-        htable
-        .rows[0]
+        htable.rows[0]
         .cells[0]
         .paragraphs[0]
     )
@@ -1252,8 +1241,7 @@ def create_word_doc(df):
     # --------------------------------------------------------
 
     m = (
-        htable
-        .rows[0]
+        htable.rows[0]
         .cells[1]
         .paragraphs[0]
     )
@@ -1293,8 +1281,7 @@ def create_word_doc(df):
     # --------------------------------------------------------
 
     l = (
-        htable
-        .rows[0]
+        htable.rows[0]
         .cells[2]
         .paragraphs[0]
     )
@@ -1370,7 +1357,9 @@ def create_word_doc(df):
         "التواريخ"
     ]
 
-    for i, txt in enumerate(labels):
+    for i, txt in enumerate(
+        labels
+    ):
 
         hdr[i].text = txt
 
@@ -1458,178 +1447,28 @@ def create_word_doc(df):
 
 
 # ============================================================
-# 9. MULTI-DAY AUDIT
-# ============================================================
-
-def run_exceptions_module():
-
-    st.markdown(
-        """
-        <div class="v2-title">
-            <h1>📋 Multi-Day Exceptions Audit</h1>
-            <p>
-                Alturath HR Department •
-                Attendance Exceptions
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    uploaded_files = st.file_uploader(
-        "Upload Exported Excels (Row 2 Header)",
-        accept_multiple_files=True,
-        type=["xlsx", "xls"]
-    )
-
-    if uploaded_files:
-
-        all_data = []
-
-        for f in uploaded_files:
-
-            file_date = (
-                extract_date_from_filename(
-                    f.name
-                )
-            )
-
-            try:
-
-                engine = (
-                    "xlrd"
-                    if f.name.lower().endswith(".xls")
-                    else "openpyxl"
-                )
-
-                df = pd.read_excel(
-                    f,
-                    engine=engine,
-                    header=1
-                )
-
-                df.columns = [
-                    str(c).strip()
-                    for c in df.columns
-                ]
-
-                if (
-                    "Status" in df.columns
-                    and
-                    "Name" in df.columns
-                ):
-
-                    mask = df["Status"].str.contains(
-                        "Late|Absence",
-                        case=False,
-                        na=False
-                    )
-
-                    day_data = df[
-                        mask
-                    ].copy()
-
-                    day_data["Report_Date"] = (
-                        file_date
-                    )
-
-                    all_data.append(
-                        day_data[
-                            [
-                                "Name",
-                                "Status",
-                                "Report_Date"
-                            ]
-                        ]
-                    )
-
-            except Exception:
-                pass
-
-        if all_data:
-
-            combined = pd.concat(
-                all_data,
-                ignore_index=True
-            )
-
-            summary = (
-                combined
-                .groupby(
-                    [
-                        "Name",
-                        "Status"
-                    ]
-                )["Report_Date"]
-                .unique()
-                .reset_index()
-            )
-
-            summary["Count"] = (
-                summary["Report_Date"]
-                .apply(len)
-            )
-
-            summary["Dates_Str"] = (
-                summary["Report_Date"]
-                .apply(
-                    lambda x:
-                    ", ".join(
-                        sorted(x)
-                    )
-                )
-            )
-
-            st.dataframe(
-                summary[
-                    [
-                        "Name",
-                        "Status",
-                        "Count",
-                        "Dates_Str"
-                    ]
-                ],
-                use_container_width=True,
-                hide_index=True
-            )
-
-            if st.button(
-                "📄 Download Official Word Report"
-            ):
-
-                report_file = (
-                    create_word_doc(
-                        summary
-                    )
-                )
-
-                st.download_button(
-                    "📥 Download .docx",
-                    report_file,
-                    "Alturath_Exceptions_Report.docx"
-                )
-
-        else:
-
-            st.info(
-                "No Late or Absence records found."
-            )
-
-
-# ============================================================
-# 10. DAILY REPORT MODULE
+# 10. DAILY REPORT UI
 # ============================================================
 
 def run_daily_report_module():
 
     st.markdown(
         """
-        <div class="v2-title">
-            <h1>📊 Daily Biometric Attendance — V2</h1>
-            <p>
-                University Of Alturath •
-                Human Resources Department
-            </p>
+        <div class="hero">
+
+            <div class="hero-label">
+                ALTURATH UNIVERSITY • HR
+            </div>
+
+            <div class="hero-title">
+                Daily Biometric Attendance
+            </div>
+
+            <div class="hero-description">
+                Current-day check-in & previous-day check-out
+                prepared for HR submission.
+            </div>
+
         </div>
         """,
         unsafe_allow_html=True
@@ -1640,7 +1479,7 @@ def run_daily_report_module():
     # ========================================================
 
     use_today = st.sidebar.toggle(
-        "📅 Show Today Only",
+        "Use Today",
         value=False
     )
 
@@ -1648,7 +1487,7 @@ def run_daily_report_module():
         date.today()
         if use_today
         else st.sidebar.date_input(
-            "Audit Date",
+            "Submission Date",
             value=date.today()
         )
     )
@@ -1668,85 +1507,133 @@ def run_daily_report_module():
         ""
     )
 
-    st.sidebar.info(
-        f"Audit Day: **{current_weekday_ar}**"
+    previous_date = (
+        target_date
+        - timedelta(days=1)
     )
 
     # ========================================================
-    # UPLOADS
+    # DATE BAR
+    # ========================================================
+
+    st.markdown(
+        f"""
+        <div class="date-bar">
+
+            <div>
+                <div class="date-main">
+                    {target_date.strftime('%A, %d %B %Y')}
+                </div>
+
+                <div class="date-sub">
+                    {current_weekday_ar}
+                </div>
+            </div>
+
+            <div class="checkout-badge">
+                Check-Out is from
+                {previous_date.strftime('%d %b %Y')}
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ========================================================
+    # SIDEBAR
     # ========================================================
 
     st.sidebar.markdown(
-        "### 🚪 Attendance Sources"
+        """
+        <div class="brand">
+
+            <div class="brand-mark">
+                ◈
+            </div>
+
+            <div class="brand-name">
+                ALTURATH HR
+            </div>
+
+            <div class="brand-sub">
+                BIOMETRIC ATTENDANCE • V2
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.sidebar.markdown(
+        "### Attendance Sources"
     )
 
     f_zaqura = st.sidebar.file_uploader(
-        "🟦 Zaqura Gate",
-        type=["xlsx", "xls"]
+        "Zaqura Gate",
+        type=["xlsx", "xls"],
+        key="zaqura"
     )
 
     f_mhmd = st.sidebar.file_uploader(
-        "🟪 Mhmd Bn Ali Gate",
-        type=["xlsx", "xls"]
+        "Mhmd Bn Ali Gate",
+        type=["xlsx", "xls"],
+        key="mhmd"
     )
 
     f_app = st.sidebar.file_uploader(
-        "🟩 Mawjood App",
-        type=["xlsx", "xls"]
+        "Mawjood App",
+        type=["xlsx", "xls"],
+        key="maw"
     )
 
     st.sidebar.markdown(
-        "### 📅 HR Files"
+        "### HR Data"
     )
 
     f_weekly = st.sidebar.file_uploader(
-        "📅 Weekly Day-Off List",
-        type=["xlsx", "xls"]
+        "Weekly Day-Off List",
+        type=["xlsx", "xls"],
+        key="weekly"
     )
 
     # ========================================================
-    # PROCESS LOGS
+    # PROCESS
     # ========================================================
 
     all_logs = []
 
     if f_zaqura:
 
-        gate_data = process_gate(
+        data = process_gate(
             f_zaqura,
             "Zaqura Gate"
         )
 
-        if not gate_data.empty:
+        if not data.empty:
 
-            all_logs.append(
-                gate_data
-            )
+            all_logs.append(data)
 
     if f_mhmd:
 
-        gate_data = process_gate(
+        data = process_gate(
             f_mhmd,
             "Mhmd Bn Ali Gate"
         )
 
-        if not gate_data.empty:
+        if not data.empty:
 
-            all_logs.append(
-                gate_data
-            )
+            all_logs.append(data)
 
     if f_app:
 
-        app_data = process_app(
+        data = process_app(
             f_app
         )
 
-        if not app_data.empty:
+        if not data.empty:
 
-            all_logs.append(
-                app_data
-            )
+            all_logs.append(data)
 
     # ========================================================
     # WEEKLY OFF
@@ -1793,18 +1680,11 @@ def run_daily_report_module():
         except Exception as e:
 
             st.warning(
-                f"Could not read weekly off file: {e}"
-            )
-
-            df_off = pd.DataFrame(
-                columns=[
-                    "Name",
-                    "OffDay"
-                ]
+                f"Weekly file error: {e}"
             )
 
     # ========================================================
-    # BUILD REPORT
+    # BUILD
     # ========================================================
 
     if all_logs or f_weekly:
@@ -1836,26 +1716,29 @@ def run_daily_report_module():
             df_off
         )
 
-        if not df_final.empty:
+        if df_final.empty:
 
-            df_final = (
-                df_final
-                .sort_values("Name")
-                .reset_index(drop=True)
+            st.info(
+                "No employees found."
             )
 
+            return
+
+        df_final = (
+            df_final
+            .sort_values("Name")
+            .reset_index(drop=True)
+        )
+
         # ====================================================
-        # SUMMARY
+        # METRICS
         # ====================================================
 
-        total = len(
-            df_final
-        )
+        total = len(df_final)
 
         on_time = len(
             df_final[
                 df_final["Status"]
-                .astype(str)
                 .str.contains(
                     "On Time",
                     na=False
@@ -1866,7 +1749,6 @@ def run_daily_report_module():
         late = len(
             df_final[
                 df_final["Status"]
-                .astype(str)
                 .str.contains(
                     "Late",
                     na=False
@@ -1877,7 +1759,6 @@ def run_daily_report_module():
         absent = len(
             df_final[
                 df_final["Status"]
-                .astype(str)
                 .str.contains(
                     "Absence",
                     na=False
@@ -1885,14 +1766,9 @@ def run_daily_report_module():
             ]
         )
 
-        checkout_only = len(
+        checkout_count = len(
             df_final[
-                df_final["Status"]
-                .astype(str)
-                .str.contains(
-                    "Check-Out Only",
-                    na=False
-                )
+                df_final["Check-Out"] != "-"
             ]
         )
 
@@ -1901,50 +1777,62 @@ def run_daily_report_module():
         with c1:
 
             st.metric(
-                "👥 Total",
+                "Employees",
                 total
             )
 
         with c2:
 
             st.metric(
-                "✅ On Time",
+                "On Time",
                 on_time
             )
 
         with c3:
 
             st.metric(
-                "🔴 Late",
+                "Late",
                 late
             )
 
         with c4:
 
             st.metric(
-                "❌ Absence",
+                "Absence",
                 absent
             )
 
         with c5:
 
             st.metric(
-                "⚠️ Check-Out Only",
-                checkout_only
+                "Previous Check-Outs",
+                checkout_count
             )
 
         # ====================================================
-        # INFO
+        # REPORT EXPLANATION
         # ====================================================
 
         st.markdown(
             f"""
-            <div class="v2-info">
-                📅 {target_date.strftime('%Y/%m/%d')}
-                &nbsp;&nbsp; | &nbsp;&nbsp;
-                {current_weekday_ar}
-                &nbsp;&nbsp; | &nbsp;&nbsp;
-                Check-In / Check-Out enabled
+            <div class="status-note">
+
+                <b>HR submission logic:</b>
+
+                Check-In is taken from
+                <b>{target_date.strftime('%d %b %Y')}</b>.
+
+                &nbsp; • &nbsp;
+
+                Check-Out is taken from
+                <b>{previous_date.strftime('%d %b %Y')}</b>.
+
+                &nbsp; • &nbsp;
+
+                This means today's HR sheet can be submitted
+                while still carrying yesterday's completed
+                checkout.
+
             </div>
             """,
             unsafe_allow_html=True
@@ -1954,28 +1842,36 @@ def run_daily_report_module():
         # TABLE
         # ====================================================
 
+        st.markdown(
+            '<div class="section-title">Attendance Register</div>',
+            unsafe_allow_html=True
+        )
+
         display_df = df_final.copy()
 
         display_df.insert(
             0,
-            "No",
+            "No.",
             range(
                 1,
                 len(display_df) + 1
             )
         )
 
+        display_df = display_df.rename(
+            columns={
+                "Name": "Name",
+                "Check-In":
+                    f"Check-In ({target_date.strftime('%d %b')})",
+                "Check-Out":
+                    f"Check-Out ({previous_date.strftime('%d %b')})",
+                "Source": "Source",
+                "Status": "Status"
+            }
+        )
+
         st.dataframe(
-            display_df[
-                [
-                    "No",
-                    "Name",
-                    "Check-In",
-                    "Check-Out",
-                    "Source",
-                    "Status"
-                ]
-            ],
+            display_df,
             use_container_width=True,
             hide_index=True
         )
@@ -1985,7 +1881,8 @@ def run_daily_report_module():
         # ====================================================
 
         st.markdown(
-            "### 📥 Export"
+            '<div class="section-title">HR Export</div>',
+            unsafe_allow_html=True
         )
 
         excel_file = create_daily_excel(
@@ -1994,12 +1891,11 @@ def run_daily_report_module():
         )
 
         st.download_button(
-            label="📊 Download Daily Excel — V2",
+            label="Download HR Excel",
             data=excel_file,
             file_name=(
-                f"HR_Report_"
-                f"{target_date.strftime('%Y-%m-%d')}"
-                f"_V2.xlsx"
+                f"HR_Attendance_"
+                f"{target_date.strftime('%Y-%m-%d')}.xlsx"
             ),
             mime=(
                 "application/vnd.openxmlformats-officedocument."
@@ -2007,14 +1903,25 @@ def run_daily_report_module():
             )
         )
 
+        st.caption(
+            "Compact LTR Excel • "
+            "Check-In = selected date • "
+            "Check-Out = previous date"
+        )
+
     else:
 
         st.markdown(
             """
-            <div class="v2-info">
-                👋 Upload at least one attendance file
-                or the weekly day-off file to generate
-                the report.
+            <div class="status-note">
+
+                <b>Ready.</b>
+
+                Upload a gate export to begin.
+                The system will automatically separate
+                Check-In and Check-Out according to the
+                biometric event and date rules.
+
             </div>
             """,
             unsafe_allow_html=True
@@ -2022,66 +1929,223 @@ def run_daily_report_module():
 
 
 # ============================================================
-# 11. MAIN
+# 11. MULTI-DAY AUDIT
 # ============================================================
 
-st.set_page_config(
-    page_title="Alturath HR System V2",
-    page_icon="🏛️",
-    layout="wide"
-)
+def run_exceptions_module():
 
-apply_v2_theme()
+    st.markdown(
+        """
+        <div class="hero">
+
+            <div class="hero-label">
+                ALTURATH UNIVERSITY • HR
+            </div>
+
+            <div class="hero-title">
+                Multi-Day Exceptions
+            </div>
+
+            <div class="hero-description">
+                Review late arrivals and absences across
+                multiple biometric exports.
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    uploaded_files = st.file_uploader(
+        "Upload Exported Excel Files",
+        accept_multiple_files=True,
+        type=["xlsx", "xls"]
+    )
+
+    if not uploaded_files:
+
+        st.markdown(
+            """
+            <div class="status-note">
+
+                Upload your daily HR Excel files.
+                The system will combine them into a
+                multi-day exceptions report.
+
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        return
+
+    all_data = []
+
+    for f in uploaded_files:
+
+        file_date = extract_date_from_filename(
+            f.name
+        )
+
+        try:
+
+            engine = (
+                "xlrd"
+                if f.name.lower().endswith(".xls")
+                else "openpyxl"
+            )
+
+            df = pd.read_excel(
+                f,
+                engine=engine,
+                header=2
+            )
+
+            df.columns = [
+                str(c).strip()
+                for c in df.columns
+            ]
+
+            # Compatibility with old files
+            if (
+                "Status" in df.columns
+                and
+                "Name" in df.columns
+            ):
+
+                mask = df["Status"].astype(str).str.contains(
+                    "Late|Absence",
+                    case=False,
+                    na=False
+                )
+
+                day_data = df[
+                    mask
+                ].copy()
+
+                day_data["Report_Date"] = (
+                    file_date
+                )
+
+                all_data.append(
+                    day_data[
+                        [
+                            "Name",
+                            "Status",
+                            "Report_Date"
+                        ]
+                    ]
+                )
+
+        except Exception as e:
+
+            st.warning(
+                f"Could not process {f.name}: {e}"
+            )
+
+    if not all_data:
+
+        st.info(
+            "No Late or Absence records found."
+        )
+
+        return
+
+    combined = pd.concat(
+        all_data,
+        ignore_index=True
+    )
+
+    summary = (
+        combined
+        .groupby(
+            [
+                "Name",
+                "Status"
+            ]
+        )["Report_Date"]
+        .unique()
+        .reset_index()
+    )
+
+    summary["Count"] = (
+        summary["Report_Date"]
+        .apply(len)
+    )
+
+    summary["Dates_Str"] = (
+        summary["Report_Date"]
+        .apply(
+            lambda x:
+            ", ".join(
+                sorted(x)
+            )
+        )
+    )
+
+    st.dataframe(
+        summary[
+            [
+                "Name",
+                "Status",
+                "Count",
+                "Dates_Str"
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
+
+    if st.button(
+        "Generate Official Word Report"
+    ):
+
+        report_file = create_word_doc(
+            summary
+        )
+
+        st.download_button(
+            "Download Word Report",
+            report_file,
+            "Alturath_Exceptions_Report.docx"
+        )
 
 
 # ============================================================
-# SIDEBAR
+# 12. SIDEBAR NAVIGATION
 # ============================================================
-
-st.sidebar.image(
-    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRfTMmtmrsxGUBnlEb0xB0ClMbFZmj_L5Ap5Q&s"
-)
-
-st.sidebar.markdown(
-    """
-    <div style="
-        text-align:center;
-        padding:8px;
-        font-size:20px;
-        font-weight:800;
-    ">
-        🏛️ ALTURATH HR
-    </div>
-
-    <div style="
-        text-align:center;
-        opacity:0.8;
-        margin-bottom:15px;
-    ">
-        Attendance System V2
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
 
 app_mode = st.sidebar.selectbox(
-    "Choose App Mode",
+    "System Module",
     [
-        "📊 Daily Report Tool",
-        "📋 Multi-Day Audit Tool"
+        "Daily Report Tool",
+        "Multi-Day Audit Tool"
     ]
 )
 
 
 # ============================================================
-# RUN
+# 13. RUN APPLICATION
 # ============================================================
 
-if app_mode == "📊 Daily Report Tool":
+if app_mode == "Daily Report Tool":
 
     run_daily_report_module()
 
 else:
 
     run_exceptions_module()
+
+
+# ============================================================
+# FOOTER
+# ============================================================
+
+st.markdown(
+    """
+    <div class="footer">
+        ALTURATH HR BIOMETRICS SYSTEM • V2
+    </div>
+    """,
+    unsafe_allow_html=True
+)
