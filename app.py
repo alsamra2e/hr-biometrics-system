@@ -227,9 +227,48 @@ def classify_gate_event(event_value, punch_datetime):
   return None
 
 
-def create_daily_excel(df_final, target_date):
+def create_daily_excel(df_final, target_date, current_weekday_ar):
   buffer = BytesIO()
   previous_date = target_date - timedelta(days=1)
+  
+  weekdays_ar_inv = {
+      'الإثنين': 'الأحد',  # mapped via english weekday lookup
+  }
+  # Determine previous day Arabic weekday name
+  days_list_ar = [
+      'الاثنين',
+      'الثلاثاء',
+      'الاربعاء',
+      'الخميس',
+      'جمعة',
+      'السبت',
+      'الأحد',
+  ]
+  # safer weekday name lookup
+  eng_weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+  ]
+  prev_weekday_str = weekdays_ar_inv.get(
+      eng_weekdays[previous_date.weekday()], ''
+  )
+  # Let's map directly:
+  ar_map = {
+      'Monday': 'الاثنين',
+      'Tuesday': 'الثلاثاء',
+      'Wednesday': 'الاربعاء',
+      'Thursday': 'الخميس',
+      'Friday': 'الجمعة',
+      'Saturday': 'السبت',
+      'Sunday': 'الاحد',
+  }
+  prev_weekday_ar = ar_map.get(previous_date.strftime('%A'), '')
+
   export_df = df_final[
       ['Name', 'Check-In', 'Check-Out', 'Source', 'Status']
   ].copy()
@@ -256,16 +295,16 @@ def create_daily_excel(df_final, target_date):
 
     title_format = workbook.add_format({
         'bold': True,
-        'font_size': 12,
+        'font_size': 13,
         'font_color': '#FFFFFF',
         'bg_color': '#071426',
         'align': 'center',
         'valign': 'vcenter',
     })
     subtitle_format = workbook.add_format({
-        'font_size': 8,
-        'font_color': '#475569',
-        'bg_color': '#F8FAFC',
+        'font_size': 9,
+        'font_color': '#334155',
+        'bg_color': '#F1F5F9',
         'align': 'center',
         'valign': 'vcenter',
     })
@@ -278,31 +317,31 @@ def create_daily_excel(df_final, target_date):
         'border': 1,
         'border_color': '#CBD5E1',
         'text_wrap': True,
-        'font_size': 9,
+        'font_size': 10,
     })
     cell_format = workbook.add_format({
         'align': 'center',
         'valign': 'vcenter',
         'border': 1,
         'border_color': '#E2E8F0',
-        'font_size': 9,
+        'font_size': 10,
     })
 
     # Exact Requested Title Format
     worksheet.merge_range(
         'A1:F1', 'جامعة التراث - الموقف اليومي', title_format
     )
-    worksheet.merge_range(
-        'A2:F2',
-        (
-            f'تاريخ الحضور: {target_date.strftime("%d %b %Y")}    |    تاريخ'
-            f' الانصراف: {previous_date.strftime("%d %b %Y")}'
-        ),
-        subtitle_format,
+    
+    # Subtitle with Day Names and Dates
+    date_subtitle = (
+        f'تاريخ الحضور: {current_weekday_ar} ({target_date.strftime("%Y/%m/%d")})'
+        f'    |    تاريخ الانصراف: {prev_weekday_ar}'
+        f' ({previous_date.strftime("%Y/%m/%d")})'
     )
+    worksheet.merge_range('A2:F2', date_subtitle, subtitle_format)
 
-    worksheet.set_row(0, 24)
-    worksheet.set_row(1, 20)
+    worksheet.set_row(0, 26)
+    worksheet.set_row(1, 22)
 
     headers = [
         'ت\nNo.',
@@ -332,12 +371,12 @@ def create_daily_excel(df_final, target_date):
         worksheet.write(excel_row, col, value, cell_format)
 
     worksheet.set_column('A:A', 6)
-    worksheet.set_column('B:B', 30)
-    worksheet.set_column('C:D', 19)
-    worksheet.set_column('E:E', 23)
+    worksheet.set_column('B:B', 32)
+    worksheet.set_column('C:D', 20)
+    worksheet.set_column('E:E', 24)
     worksheet.set_column('F:F', 18)
 
-    # Freeze panes on the first 3 rows (Title, Subtitle, and Headers)
+    # Freeze panes precisely on the first 3 rows (Title, Subtitle, Headers)
     worksheet.freeze_panes(3, 0)
     worksheet.hide_gridlines(2)
 
@@ -422,6 +461,11 @@ def run_daily_report_module():
       df['Date'] = df['dt'].dt.date
       df['Time'] = df['dt'].dt.strftime('%H:%M')
       df['Source'] = gate_name
+      
+      # Keep logs for target_date and previous day to avoid dropping check-outs
+      prev_d = target_date - timedelta(days=1)
+      df = df[(df['Date'] == target_date) | (df['Date'] == prev_d)]
+
       return df[
           ['Name', 'Raw_Name', 'dt', 'Date', 'Time', 'Event_Type', 'Source']
       ].sort_values('dt')
@@ -574,7 +618,7 @@ def run_daily_report_module():
       st.markdown('---')
       st.dataframe(df_final, use_container_width=True)
 
-      excel_bytes = create_daily_excel(df_final, target_date)
+      excel_bytes = create_daily_excel(df_final, target_date, current_weekday_ar)
       st.download_button(
           '📥 Export Daily Excel Report',
           excel_bytes,
