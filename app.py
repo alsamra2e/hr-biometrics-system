@@ -931,6 +931,9 @@ def main():
   file_zaqura = st.sidebar.file_uploader(
       "Zaqura Gate File", type=["xlsx", "xls"]
   )
+  file_mhmd = st.sidebar.file_uploader(
+      "Mhmd Bn Ali Gate File", type=["xlsx", "xls"]
+  )
   file_mawjood = st.sidebar.file_uploader(
       "Mawjood App File", type=["xlsx", "xls"]
   )
@@ -944,15 +947,20 @@ def main():
     show_top_brand()
     daily_hero()
 
-    if file_zaqura or file_mawjood:
+    if file_zaqura or file_mhmd or file_mawjood:
       df_z = (
           process_gate(file_zaqura, "Zaqura Gate")
           if file_zaqura
           else pd.DataFrame()
       )
+      df_mhmd = (
+          process_gate(file_mhmd, "Mhmd Bn Ali Gate")
+          if file_mhmd
+          else pd.DataFrame()
+      )
       df_m = process_app(file_mawjood) if file_mawjood else pd.DataFrame()
 
-      dfs_to_concat = [d for d in [df_z, df_m] if not d.empty]
+      dfs_to_concat = [d for d in [df_z, df_mhmd, df_m] if not d.empty]
       df_logs = (
           pd.concat(dfs_to_concat, ignore_index=True)
           if dfs_to_concat
@@ -1002,7 +1010,8 @@ def main():
     else:
       st.info(
           "👈 Please upload your biometric attendance files from the sidebar"
-          " to generate the daily report."
+          " (Zaqura Gate, Mhmd Bn Ali Gate, or Mawjood App) to generate the"
+          " daily report."
       )
 
   elif app_mode == "Exceptions & Violations":
