@@ -45,15 +45,10 @@ def clean_arabic_name(name):
   """
   if not isinstance(name, str):
     return ''
-  # Strip department suffixes like '/الصيدلة', ' - IT', etc.
   base = re.split(r'[/\\-\(\)]', name)[0].strip()
-  # Remove Arabic tashkeel (diacritics)
   base = re.sub(r'[\u064b-\u0652]', '', base)
-  # Unify Alef variants
   base = re.sub(r'[إأآٱ]', 'ا', base)
-  # Standardize Taa Marbuta and Haa for matching (رقيه / رقية)
   base = base.replace('ة', 'ه')
-  # Normalize whitespace
   base = ' '.join(base.split())
   return base
 
@@ -238,8 +233,7 @@ def run_daily_report_module():
   )
   st.markdown(
       '<p style="color:#64748b; font-size:0.9rem;">Consolidate physical gate'
-      ' logs (Zaqura & Mhmd Bn Ali) and Mawjood App records against official'
-      ' weekly off schedules.</p>',
+      ' logs (Zaqura & Mhmd Bn Ali) against official weekly off schedules.</p>',
       unsafe_allow_html=True,
   )
 
@@ -276,7 +270,6 @@ def run_daily_report_module():
   f_mhmd = st.sidebar.file_uploader(
       'Mhmd Bn Ali Gate File', type=['xlsx', 'xls']
   )
-  f_app = st.sidebar.file_uploader('Mawjood App File', type=['xlsx', 'xls'])
   f_weekly = st.sidebar.file_uploader(
       '📅 Weekly Day-Off List File', type=['xlsx', 'xls']
   )
@@ -317,62 +310,11 @@ def run_daily_report_module():
     except Exception:
       return pd.DataFrame()
 
-  def process_app(file):
-    try:
-      df = pd.read_excel(file, header=3)
-      df.columns = [str(c).strip() for c in df.columns]
-      if 'الاسم' not in df.columns:
-        return pd.DataFrame()
-
-      result = []
-      if 'دخول' in df.columns:
-        for _, row in df.iterrows():
-          dt = pd.to_datetime(row['دخول'], errors='coerce')
-          if pd.notna(dt):
-            raw_n = str(row['الاسم']).strip()
-            result.append({
-                'Name': clean_arabic_name(raw_n),
-                'Raw_Name': raw_n,
-                'dt': dt,
-                'Date': dt.date(),
-                'Time': dt.strftime('%H:%M'),
-                'Event_Type': 'Check-In',
-                'Source': 'Mawjood App',
-            })
-
-      checkout_columns = [
-          'خروج',
-          'الانصراف',
-          'وقت الخروج',
-          'Check-Out',
-          'Checkout',
-      ]
-      chk_col = next((c for c in checkout_columns if c in df.columns), None)
-      if chk_col:
-        for _, row in df.iterrows():
-          dt = pd.to_datetime(row[chk_col], errors='coerce')
-          if pd.notna(dt):
-            raw_n = str(row['الاسم']).strip()
-            result.append({
-                'Name': clean_arabic_name(raw_n),
-                'Raw_Name': raw_n,
-                'dt': dt,
-                'Date': dt.date(),
-                'Time': dt.strftime('%H:%M'),
-                'Event_Type': 'Check-Out',
-                'Source': 'Mawjood App',
-            })
-      return pd.DataFrame(result)
-    except Exception:
-      return pd.DataFrame()
-
   all_logs = []
   if f_zaqura:
     all_logs.append(process_gate(f_zaqura, 'Zaqura Gate'))
   if f_mhmd:
     all_logs.append(process_gate(f_mhmd, 'Mhmd Bn Ali Gate'))
-  if f_app:
-    all_logs.append(process_app(f_app))
 
   if all_logs or f_weekly:
     df_logs = (
@@ -399,7 +341,6 @@ def run_daily_report_module():
       off_raw['Name'] = off_raw['Raw_Name'].apply(clean_arabic_name)
       df_off = off_raw
 
-    # Build mapping from normalized clean name to preferred raw display name
     name_display_map = {}
     if not df_logs.empty:
       for _, row in df_logs[['Name', 'Raw_Name']].drop_duplicates().iterrows():
@@ -451,7 +392,6 @@ def run_daily_report_module():
       is_off = False
       if not off_info.empty:
         off_val = str(off_info['OffDay'].iloc[0])
-        # Support multiple off days separated by comma, slash, or spaces
         off_days = [
             d.strip() for d in re.split(r'[,،/\\-\s]+', off_val) if d.strip()
         ]
@@ -479,31 +419,37 @@ def run_daily_report_module():
 
     df_final = pd.DataFrame(final_data)
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric('Total Employees', len(df_final))
-    col2.metric(
-        'On-Time', len(df_final[df_final['Status'].str.contains('On Time')])
-    )
-    col3.metric(
-        'Violations / Absences',
-        len(
-            df_final[
-                df_final['Status'].str.contains('Late|Absence', na=False)
-            ]
-        ),
-    )
+    if not df_final.empty:
+      col1, col2, col3 = st.columns(3)
+      col1.metric('Total Employees', len(df_final))
+      col2.metric(
+          'On-Time', len(df_final[df_final['Status'].str.contains('On Time')])
+      )
+      col3.metric(
+          'Violations / Absences',
+          len(
+              df_final[
+                  df_final['Status'].str.contains('Late|Absence', na=False)
+              ]
+          ),
+      )
 
-    st.markdown('---')
-    st.dataframe(df_final, use_container_width=True)
+      st.markdown('---')
+      st.dataframe(df_final, use_container_width=True)
 
-    buf = BytesIO()
-    with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
-      df_final.to_excel(writer, index=False, sheet_name='Audit', startrow=1)
+      buf = BytesIO()
+      with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
+        df_final.to_excel(writer, index=False, sheet_name='Audit', startrow=1)
 
-    st.download_button(
-        '📥 Export Daily Excel Report',
-        buf.getvalue(),
-        f'HR_Report_{target_date}.xlsx',
+      st.download_button(
+          '📥 Export Daily Excel Report',
+          buf.getvalue(),
+          f'HR_Report_{target_date}.xlsx',
+      )
+  else:
+    st.info(
+        '👈 Please upload your gate log files and weekly off schedule from the'
+        ' sidebar to start.'
     )
 
 
