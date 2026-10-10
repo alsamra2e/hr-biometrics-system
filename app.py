@@ -3,6 +3,7 @@ from datetime import date, time, timedelta
 from io import BytesIO
 import os
 import re
+import textwrap
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -37,161 +38,284 @@ st.set_page_config(
 
 def apply_theme():
   st.markdown(
-      """
-<style>
-:root {
-    --navy: #071426;
-    --navy2: #0d2038;
-    --blue: #2563eb;
-    --blue2: #3b82f6;
-    --cyan: #06b6d4;
-    --green: #16a34a;
-    --red: #dc2626;
-    --orange: #ea580c;
-    --yellow: #ca8a04;
-    --text: #0f172a;
-    --muted: #64748b;
-    --border: #e2e8f0;
-    --bg: #f4f7fb;
-    --white: #ffffff;
-}
+      textwrap.dedent("""
+        <style>
+        :root {
+            --navy: #071426;
+            --navy2: #0d2038;
+            --blue: #2563eb;
+            --blue2: #3b82f6;
+            --cyan: #06b6d4;
+            --green: #16a34a;
+            --red: #dc2626;
+            --orange: #ea580c;
+            --yellow: #ca8a04;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --bg: #f4f7fb;
+            --white: #ffffff;
+        }
 
-html, body, .stApp, [data-testid="stAppViewContainer"] {
-    background: var(--bg) !important;
-}
+        html, body, .stApp, [data-testid="stAppViewContainer"] {
+            background: var(--bg) !important;
+        }
 
-.stApp, .stApp * {
-    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-}
+        .stApp, .stApp * {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        }
 
-.block-container {
-    width: 100% !important;
-    max-width: 1500px !important;
-    padding-top: 1rem !important;
-    padding-bottom: 3rem !important;
-    padding-left: 2rem !important;
-    padding-right: 2rem !important;
-}
+        .block-container {
+            width: 100% !important;
+            max-width: 1500px !important;
+            padding-top: 1rem !important;
+            padding-bottom: 3rem !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+        }
 
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #061221 0%, #091a2d 50%, #0b213b 100%) !important;
-    border-right: 1px solid #20344d !important;
-}
+        section[data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #061221 0%, #091a2d 50%, #0b213b 100%) !important;
+            border-right: 1px solid #20344d !important;
+        }
 
-section[data-testid="stSidebar"] > div {
-    padding: 1rem 0.85rem 1.5rem 0.85rem !important;
-}
+        section[data-testid="stSidebar"] > div {
+            padding: 1rem 0.85rem 1.5rem 0.85rem !important;
+        }
 
-section[data-testid="stSidebar"] * {
-    color: #e8f0fa;
-}
+        section[data-testid="stSidebar"] * {
+            color: #e8f0fa;
+        }
 
-section[data-testid="stSidebar"] label {
-    color: #9fb1c6 !important;
-    font-size: 0.75rem !important;
-    font-weight: 700 !important;
-}
+        section[data-testid="stSidebar"] label {
+            color: #9fb1c6 !important;
+            font-size: 0.75rem !important;
+            font-weight: 700 !important;
+        }
 
-section[data-testid="stSidebar"] h3 {
-    color: #ffffff !important;
-    font-size: 0.85rem !important;
-}
+        section[data-testid="stSidebar"] h3 {
+            color: #ffffff !important;
+            font-size: 0.85rem !important;
+        }
 
-section[data-testid="stSidebar"] div[data-baseweb="select"] > div,
-section[data-testid="stSidebar"] div[data-baseweb="input"] {
-    background: #10243c !important;
-    border: 1px solid #2b425e !important;
-    border-radius: 10px !important;
-}
+        section[data-testid="stSidebar"] div[data-baseweb="select"] > div,
+        section[data-testid="stSidebar"] div[data-baseweb="input"] {
+            background: #10243c !important;
+            border: 1px solid #2b425e !important;
+            border-radius: 10px !important;
+        }
 
-section[data-testid="stSidebar"] input {
-    color: #ffffff !important;
-}
+        section[data-testid="stSidebar"] input {
+            color: #ffffff !important;
+        }
 
-section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
-    background: #0e2035 !important;
-    border: 1px dashed #36516e !important;
-    border-radius: 10px !important;
-}
+        section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
+            background: #0e2035 !important;
+            border: 1px dashed #36516e !important;
+            border-radius: 10px !important;
+        }
 
-section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] {
-    color: #9fb1c6 !important;
-}
+        section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] {
+            color: #9fb1c6 !important;
+        }
 
-div[data-testid="stMetric"] {
-    background: #ffffff !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 14px !important;
-    padding: 0.75rem 0.85rem !important;
-    box-shadow: 0 5px 18px rgba(15,23,42,0.035);
-}
+        .sidebar-brand {
+            padding: 0.25rem 0.2rem 1.2rem 0.2rem;
+        }
 
-div[data-testid="stMetricLabel"] {
-    color: #64748b !important;
-    font-size: 0.68rem !important;
-    font-weight: 700 !important;
-}
+        .sidebar-logo {
+            width: 68px;
+            height: 68px;
+            object-fit: contain;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 7px;
+            margin-bottom: 0.7rem;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+        }
 
-div[data-testid="stMetricValue"] {
-    color: #0f172a !important;
-    font-size: 1.3rem !important;
-    font-weight: 850 !important;
-}
+        .sidebar-brand-name {
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 850;
+            letter-spacing: 0.5px;
+        }
 
-.section-heading {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    color: #0f172a;
-    font-size: 0.98rem;
-    font-weight: 850;
-    margin-top: 1.35rem;
-    margin-bottom: 0.65rem;
-}
+        .sidebar-brand-sub {
+            color: #7287a0;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 1.4px;
+            margin-top: 0.25rem;
+        }
 
-.section-heading::before {
-    content: "";
-    width: 4px;
-    height: 18px;
-    border-radius: 10px;
-    background: linear-gradient(180deg, #2563eb, #06b6d4);
-}
+        .top-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 0.85rem;
+        }
 
-.info-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-left: 4px solid #2563eb;
-    border-radius: 12px;
-    padding: 0.85rem 1rem;
-    color: #475569;
-    font-size: 0.75rem;
-    line-height: 1.8;
-    margin: 0.75rem 0;
-}
+        .top-brand-logo {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            background: #ffffff;
+            border: 1px solid #dbe3ed;
+            border-radius: 13px;
+            padding: 5px;
+            box-shadow: 0 5px 14px rgba(15,23,42,0.06);
+        }
 
-.info-card strong {
-    color: #0f172a;
-}
+        .top-brand-title {
+            color: #0f172a;
+            font-size: 0.92rem;
+            font-weight: 850;
+        }
 
-div[data-testid="stDataFrame"] {
-    width: 100%;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    overflow: hidden;
-    box-shadow: 0 6px 20px rgba(15,23,42,0.04);
-}
+        .top-brand-subtitle {
+            color: #64748b;
+            font-size: 0.68rem;
+            margin-top: 2px;
+        }
 
-.stButton > button, .stDownloadButton > button {
-    min-height: 42px !important;
-    border-radius: 10px !important;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
-    color: #ffffff !important;
-    border: 1px solid #2563eb !important;
-    font-weight: 750 !important;
-    box-shadow: 0 6px 16px rgba(37,99,235,0.15);
-}
-</style>
-        """,
+        .hero-card {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #061322 0%, #0b1e35 55%, #123354 100%);
+            border: 1px solid #203b59;
+            border-radius: 20px;
+            padding: 1.8rem 2rem;
+            margin-bottom: 0.9rem;
+            box-shadow: 0 18px 45px rgba(15,23,42,0.12);
+        }
+
+        .hero-card::before {
+            content: "";
+            position: absolute;
+            width: 320px;
+            height: 320px;
+            right: -150px;
+            top: -190px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(37,99,235,0.35), rgba(37,99,235,0) 70%);
+        }
+
+        .hero-card::after {
+            content: "";
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            right: 80px;
+            bottom: -140px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(6,182,212,0.18), rgba(6,182,212,0) 70%);
+        }
+
+        .hero-kicker {
+            position: relative;
+            z-index: 2;
+            color: #60a5fa;
+            font-size: 0.65rem;
+            font-weight: 850;
+            letter-spacing: 1.8px;
+            margin-bottom: 0.45rem;
+        }
+
+        .hero-title {
+            position: relative;
+            z-index: 2;
+            color: #ffffff;
+            font-size: clamp(1.35rem, 3vw, 2rem);
+            font-weight: 850;
+            line-height: 1.15;
+            margin: 0;
+        }
+
+        .hero-text {
+            position: relative;
+            z-index: 2;
+            color: #aab9ca;
+            font-size: 0.8rem;
+            line-height: 1.65;
+            margin-top: 0.65rem;
+            max-width: 800px;
+        }
+
+        div[data-testid="stMetric"] {
+            background: #ffffff !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 14px !important;
+            padding: 0.75rem 0.85rem !important;
+            box-shadow: 0 5px 18px rgba(15,23,42,0.035);
+        }
+
+        div[data-testid="stMetricLabel"] {
+            color: #64748b !important;
+            font-size: 0.68rem !important;
+            font-weight: 700 !important;
+        }
+
+        div[data-testid="stMetricValue"] {
+            color: #0f172a !important;
+            font-size: 1.3rem !important;
+            font-weight: 850 !important;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            color: #0f172a;
+            font-size: 0.98rem;
+            font-weight: 850;
+            margin-top: 1.35rem;
+            margin-bottom: 0.65rem;
+        }
+
+        .section-heading::before {
+            content: "";
+            width: 4px;
+            height: 18px;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #2563eb, #06b6d4);
+        }
+
+        .info-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #2563eb;
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            color: #475569;
+            font-size: 0.75rem;
+            line-height: 1.8;
+            margin: 0.75rem 0;
+        }
+
+        .info-card strong {
+            color: #0f172a;
+        }
+
+        div[data-testid="stDataFrame"] {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(15,23,42,0.04);
+        }
+
+        .stButton > button, .stDownloadButton > button {
+            min-height: 42px !important;
+            border-radius: 10px !important;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+            color: #ffffff !important;
+            border: 1px solid #2563eb !important;
+            font-weight: 750 !important;
+            box-shadow: 0 6px 16px rgba(37,99,235,0.15);
+        }
+        </style>
+        """),
       unsafe_allow_html=True,
   )
 
@@ -225,38 +349,54 @@ def get_logo_base64():
 
 def show_sidebar_brand():
   encoded = get_logo_base64()
-  with st.sidebar:
-    if encoded:
-      st.markdown(
-          f'<img src="data:image/png;base64,{encoded}"'
-          ' style="width:68px;height:68px;object-fit:contain;background:#ffffff;border-radius:16px;padding:7px;margin-bottom:0.7rem;box-shadow:0'
-          ' 12px 28px rgba(0,0,0,0.28);" alt="Logo">',
-          unsafe_allow_html=True,
-      )
-    st.markdown(
-        "### ALTURATH HR\n<p"
-        ' style="color:#7287a0;font-size:0.62rem;font-weight:700;letter-spacing:1.4px;margin-top:-10px;">BIOMETRIC'
-        ' ATTENDANCE SYSTEM</p>',
+  if encoded:
+    st.sidebar.markdown(
+        textwrap.dedent(f"""
+            <div class="sidebar-brand">
+                <img class="sidebar-logo" src="data:image/png;base64,{encoded}">
+                <div class="sidebar-brand-name">ALTURATH HR</div>
+                <div class="sidebar-brand-sub">BIOMETRIC ATTENDANCE SYSTEM</div>
+            </div>
+            """),
+        unsafe_allow_html=True,
+    )
+  else:
+    st.sidebar.markdown(
+        textwrap.dedent("""
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-name">ALTURATH HR</div>
+                <div class="sidebar-brand-sub">BIOMETRIC ATTENDANCE SYSTEM</div>
+            </div>
+            """),
         unsafe_allow_html=True,
     )
 
 
 def show_top_brand():
   encoded = get_logo_base64()
-  col1, col2 = st.columns([0.05, 0.95])
-  with col1:
-    if encoded:
-      st.markdown(
-          f'<img src="data:image/png;base64,{encoded}"'
-          ' style="width:48px;height:48px;object-fit:contain;background:#ffffff;border:1px'
-          ' solid #dbe3ed;border-radius:13px;padding:5px;" alt="Logo">',
-          unsafe_allow_html=True,
-      )
-  with col2:
+  if encoded:
     st.markdown(
-        "**ALTURATH UNIVERSITY**\n<p"
-        ' style="color:#64748b;font-size:0.68rem;margin-top:-12px;">Human'
-        " Resources • Biometric Attendance</p>",
+        textwrap.dedent(f"""
+            <div class="top-brand">
+                <img class="top-brand-logo" src="data:image/png;base64,{encoded}">
+                <div>
+                    <div class="top-brand-title">ALTURATH UNIVERSITY</div>
+                    <div class="top-brand-subtitle">Human Resources • Biometric Attendance</div>
+                </div>
+            </div>
+            """),
+        unsafe_allow_html=True,
+    )
+  else:
+    st.markdown(
+        textwrap.dedent("""
+            <div class="top-brand">
+                <div>
+                    <div class="top-brand-title">ALTURATH UNIVERSITY</div>
+                    <div class="top-brand-subtitle">Human Resources • Biometric Attendance</div>
+                </div>
+            </div>
+            """),
         unsafe_allow_html=True,
     )
 
@@ -732,16 +872,41 @@ def create_word_doc(df):
 
 
 def daily_hero():
-  st.info(
-      "**ALTURATH UNIVERSITY • HUMAN RESOURCES**\n\n### Daily Biometric"
-      " Attendance\n\nسجل الحضور اليومي للموارد البشرية — دخول اليوم وخروج اليوم"
-      " السابق وفق آلية التسليم المعتمدة لدى قسم الموارد البشرية."
+  st.markdown(
+      textwrap.dedent("""
+        <div class="hero-card">
+            <div class="hero-kicker">
+                ALTURATH UNIVERSITY • HUMAN RESOURCES
+            </div>
+            <div class="hero-title">
+                Daily Biometric Attendance
+            </div>
+            <div class="hero-text">
+                سجل الحضور اليومي للموارد البشرية —
+                دخول اليوم وخروج اليوم السابق وفق آلية
+                التسليم المعتمدة لدى قسم الموارد البشرية.
+            </div>
+        </div>
+        """),
+      unsafe_allow_html=True,
   )
 
 
 def exceptions_hero():
-  st.info(
-      "**ALTURATH UNIVERSITY • HUMAN RESOURCES**\n\n### Attendance Exceptions &"
-      " Violations\n\nسجل الاستثناءات والتأخير والغيابات — متابعة حالات التأخير"
-      " المتكرر والغياب للمنتسبين."
+  st.markdown(
+      textwrap.dedent("""
+        <div class="hero-card">
+            <div class="hero-kicker">
+                ALTURATH UNIVERSITY • HUMAN RESOURCES
+            </div>
+            <div class="hero-title">
+                Attendance Exceptions & Violations
+            </div>
+            <div class="hero-text">
+                سجل الاستثناءات والتأخير والغيابات —
+                متابعة حالات التأخير المتكرر والغياب للمنتسبين.
+            </div>
+        </div>
+        """),
+      unsafe_allow_html=True,
   )
