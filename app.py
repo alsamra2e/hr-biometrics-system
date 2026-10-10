@@ -12,7 +12,7 @@ import requests
 import streamlit as st
 
 # ============================================================
-# 1. GLOBAL UTILITIES & RTL HELPERS
+# 1. GLOBAL UTILITIES & ARABIC NAME NORMALIZATION
 # ============================================================
 
 
@@ -37,8 +37,29 @@ def extract_date_from_filename(filename):
   return match.group(0) if match else str(date.today())
 
 
+def clean_arabic_name(name):
+  """Normalizes Arabic names by removing department tags, diacritics,
+
+  unifying Alef variants, and standardizing Taa Marbuta/Haa for accurate
+  matching.
+  """
+  if not isinstance(name, str):
+    return ''
+  # Strip department suffixes like '/الصيدلة', ' - IT', etc.
+  base = re.split(r'[/\\-\(\)]', name)[0].strip()
+  # Remove Arabic tashkeel (diacritics)
+  base = re.sub(r'[\u064b-\u0652]', '', base)
+  # Unify Alef variants
+  base = re.sub(r'[إأآٱ]', 'ا', base)
+  # Standardize Taa Marbuta and Haa for matching (رقيه / رقية)
+  base = base.replace('ة', 'ه')
+  # Normalize whitespace
+  base = ' '.join(base.split())
+  return base
+
+
 # ============================================================
-# 2. AUDIT MODULE (Word Generation)
+# 2. OFFICIAL WORD REPORT GENERATION (BILINGUAL)
 # ============================================================
 
 
@@ -48,7 +69,7 @@ def create_word_doc(df):
   header = section.header
   htable = header.add_table(1, 3, width=Inches(6.5))
 
-  # Right: Arabic
+  # Right: Arabic Header
   r = htable.rows[0].cells[0].paragraphs[0]
   r.text = (
       'جامعة التراث\nقسم الشؤون الإدارية والمالية\nشعبة الموارد البشرية'
@@ -56,7 +77,7 @@ def create_word_doc(df):
   r.alignment = WD_ALIGN_PARAGRAPH.RIGHT
   set_rtl(r)
 
-  # Middle: Logo
+  # Middle: University Shield Logo
   m = htable.rows[0].cells[1].paragraphs[0]
   m.alignment = WD_ALIGN_PARAGRAPH.CENTER
   try:
@@ -68,7 +89,7 @@ def create_word_doc(df):
   except Exception:
     pass
 
-  # Left: English
+  # Left: English Header
   l = htable.rows[0].cells[2].paragraphs[0]
   l.text = (
       'University Of Alturath\nDept. Of Admin & Financial Affairs\nHR'
@@ -76,7 +97,7 @@ def create_word_doc(df):
   )
   l.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-  # Separator
+  # Separator line
   p_line = doc.add_paragraph()
   run_line = p_line.add_run(
       '______________________________________________________________________'
@@ -84,7 +105,7 @@ def create_word_doc(df):
   run_line.font.color.rgb = RGBColor(0x8F, 0x0B, 0x0B)
   p_line.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-  # Body
+  # Official Body Text
   body = doc.add_paragraph(
       '\nنرفق لسيادتكم في ادناه الكشف الخاص بموقف الحضور والغياب لكادر العمل'
       ' الخاص بجامعة التراث وحسب كشف البصمة المرفق طيا نسخة منه ... راجين التفضل'
@@ -93,7 +114,7 @@ def create_word_doc(df):
   body.alignment = WD_ALIGN_PARAGRAPH.RIGHT
   set_rtl(body)
 
-  # Table
+  # Data Table
   table = doc.add_table(rows=1, cols=5)
   table.style = 'Table Grid'
   set_table_rtl(table)
@@ -118,7 +139,7 @@ def create_word_doc(df):
       cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
       set_rtl(cell.paragraphs[0])
 
-  # Signature
+  # Official Signature Block
   doc.add_paragraph('\n\n')
   sig = doc.add_paragraph(
       'م.م محمد زهير طالب النقيب\nمدير قسم الشؤون الادارية والموارد البشرية'
@@ -134,11 +155,18 @@ def create_word_doc(df):
 
 def run_exceptions_module():
   st.markdown(
-      '<div class="main-header">📋 Multi-Day Exceptions Audit</div>',
+      '<div class="main-header">📋 Multi-Day Exceptions Audit Report</div>',
       unsafe_allow_html=True,
   )
+  st.markdown(
+      '<p style="color:#64748b; font-size:0.9rem;">Aggregate attendance'
+      ' exceptions, lateness, and absence logs across multiple exported'
+      ' files.</p>',
+      unsafe_allow_html=True,
+  )
+
   uploaded_files = st.file_uploader(
-      'Upload Exported Excels (Row 2 Header)',
+      'Upload Exported Excel Reports',
       accept_multiple_files=True,
       type=['xlsx', 'xls'],
   )
@@ -177,10 +205,10 @@ def run_exceptions_module():
           use_container_width=True,
       )
 
-      if st.button('Generate Official Word Report'):
+      if st.button('Generate Official Word Report (.docx)'):
         report_file = create_word_doc(summary)
         st.download_button(
-            '📥 Download .docx Report',
+            '📥 Download Official Word Document',
             report_file,
             'Alturath_Exceptions_Report.docx',
         )
@@ -206,6 +234,12 @@ def classify_gate_event(event_value, punch_datetime):
 def run_daily_report_module():
   st.markdown(
       '<div class="main-header">Daily Biometric Attendance Audit</div>',
+      unsafe_allow_html=True,
+  )
+  st.markdown(
+      '<p style="color:#64748b; font-size:0.9rem;">Consolidate physical gate'
+      ' logs (Zaqura & Mhmd Bn Ali) and Mawjood App records against official'
+      ' weekly off schedules.</p>',
       unsafe_allow_html=True,
   )
 
@@ -236,12 +270,15 @@ def run_daily_report_module():
       f'Audit Day: **{current_weekday_ar}**\n\nCutoff: **{threshold_str}**'
   )
 
+  st.sidebar.markdown('---')
   st.sidebar.subheader('Data Sources')
-  f_zaqura = st.sidebar.file_uploader('Zaqura Gate', type=['xlsx', 'xls'])
-  f_mhmd = st.sidebar.file_uploader('Mhmd Bn Ali Gate', type=['xlsx', 'xls'])
-  f_app = st.sidebar.file_uploader('Mawjood App', type=['xlsx', 'xls'])
+  f_zaqura = st.sidebar.file_uploader('Zaqura Gate File', type=['xlsx', 'xls'])
+  f_mhmd = st.sidebar.file_uploader(
+      'Mhmd Bn Ali Gate File', type=['xlsx', 'xls']
+  )
+  f_app = st.sidebar.file_uploader('Mawjood App File', type=['xlsx', 'xls'])
   f_weekly = st.sidebar.file_uploader(
-      '📅 Weekly Day-Off List', type=['xlsx', 'xls']
+      '📅 Weekly Day-Off List File', type=['xlsx', 'xls']
   )
 
   def process_gate(file, gate_name):
@@ -258,7 +295,8 @@ def run_daily_report_module():
       if not name_col or 'الوقت' not in df.columns:
         return pd.DataFrame()
 
-      df['Name'] = df[name_col].astype(str).str.strip()
+      df['Raw_Name'] = df[name_col].astype(str).str.strip()
+      df['Name'] = df['Raw_Name'].apply(clean_arabic_name)
       df['dt'] = pd.to_datetime(df['الوقت'], errors='coerce')
       df = df[df['dt'].notna()].copy()
 
@@ -274,7 +312,7 @@ def run_daily_report_module():
       df['Time'] = df['dt'].dt.strftime('%H:%M')
       df['Source'] = gate_name
       return df[
-          ['Name', 'dt', 'Date', 'Time', 'Event_Type', 'Source']
+          ['Name', 'Raw_Name', 'dt', 'Date', 'Time', 'Event_Type', 'Source']
       ].sort_values('dt')
     except Exception:
       return pd.DataFrame()
@@ -291,8 +329,10 @@ def run_daily_report_module():
         for _, row in df.iterrows():
           dt = pd.to_datetime(row['دخول'], errors='coerce')
           if pd.notna(dt):
+            raw_n = str(row['الاسم']).strip()
             result.append({
-                'Name': str(row['الاسم']).strip(),
+                'Name': clean_arabic_name(raw_n),
+                'Raw_Name': raw_n,
                 'dt': dt,
                 'Date': dt.date(),
                 'Time': dt.strftime('%H:%M'),
@@ -312,8 +352,10 @@ def run_daily_report_module():
         for _, row in df.iterrows():
           dt = pd.to_datetime(row[chk_col], errors='coerce')
           if pd.notna(dt):
+            raw_n = str(row['الاسم']).strip()
             result.append({
-                'Name': str(row['الاسم']).strip(),
+                'Name': clean_arabic_name(raw_n),
+                'Raw_Name': raw_n,
                 'dt': dt,
                 'Date': dt.date(),
                 'Time': dt.strftime('%H:%M'),
@@ -337,34 +379,49 @@ def run_daily_report_module():
         pd.concat(all_logs, ignore_index=True)
         if all_logs
         else pd.DataFrame(
-            columns=['Name', 'dt', 'Date', 'Time', 'Event_Type', 'Source']
+            columns=[
+                'Name',
+                'Raw_Name',
+                'dt',
+                'Date',
+                'Time',
+                'Event_Type',
+                'Source',
+            ]
         )
     )
 
-    df_off = pd.DataFrame(columns=['Name', 'OffDay'])
+    df_off = pd.DataFrame(columns=['Name', 'Raw_Name', 'OffDay'])
     if f_weekly:
-      df_off = pd.read_excel(f_weekly).rename(
-          columns={'الاسم الثلاثي': 'Name', 'الاجازة الاسبوعية': 'OffDay'}
+      off_raw = pd.read_excel(f_weekly).rename(
+          columns={'الاسم الثلاثي': 'Raw_Name', 'الاجازة الاسبوعية': 'OffDay'}
       )
+      off_raw['Name'] = off_raw['Raw_Name'].apply(clean_arabic_name)
+      df_off = off_raw
+
+    # Build mapping from normalized clean name to preferred raw display name
+    name_display_map = {}
+    if not df_logs.empty:
+      for _, row in df_logs[['Name', 'Raw_Name']].drop_duplicates().iterrows():
+        name_display_map[row['Name']] = row['Raw_Name']
+    if not df_off.empty:
+      for _, row in df_off[['Name', 'Raw_Name']].drop_duplicates().iterrows():
+        if row['Name'] not in name_display_map:
+          name_display_map[row['Name']] = row['Raw_Name']
 
     master_names = set()
     if not df_logs.empty:
-      master_names.update(
-          df_logs['Name'].dropna().astype(str).str.strip().tolist()
-      )
+      master_names.update(df_logs['Name'].dropna().unique())
     if not df_off.empty:
-      master_names.update(
-          df_off['Name'].dropna().astype(str).str.strip().tolist()
-      )
+      master_names.update(df_off['Name'].dropna().unique())
 
     final_data = []
     previous_date = target_date - timedelta(days=1)
 
-    for name in sorted(master_names):
+    for clean_name in sorted(master_names):
+      display_name = name_display_map.get(clean_name, clean_name)
       person = (
-          df_logs[df_logs['Name'].astype(str).str.strip() == str(name).strip()]
-          .copy()
-          .sort_values('dt')
+          df_logs[df_logs['Name'] == clean_name].copy().sort_values('dt')
       )
 
       today_checkins = person[
@@ -390,14 +447,15 @@ def run_daily_report_module():
         check_out = last_out['Time']
         check_out_source = last_out['Source']
 
-      off_info = df_off[
-          df_off['Name'].astype(str).str.strip() == str(name).strip()
-      ]
-      is_off = (
-          (str(off_info['OffDay'].iloc[0]).strip() == current_weekday_ar)
-          if not off_info.empty
-          else False
-      )
+      off_info = df_off[df_off['Name'] == clean_name]
+      is_off = False
+      if not off_info.empty:
+        off_val = str(off_info['OffDay'].iloc[0])
+        # Support multiple off days separated by comma, slash, or spaces
+        off_days = [
+            d.strip() for d in re.split(r'[,،/\\-\s]+', off_val) if d.strip()
+        ]
+        is_off = current_weekday_ar in off_days
 
       if check_in != '-':
         status = '🔴 Late' if check_in > threshold_str else '🟢 On Time'
@@ -412,7 +470,7 @@ def run_daily_report_module():
       source_str = ' + '.join(dict.fromkeys(sources)) if sources else '-'
 
       final_data.append({
-          'Name': name,
+          'Name': display_name,
           'Check-In': check_in,
           'Check-Out': check_out,
           'Source': source_str,
@@ -450,7 +508,7 @@ def run_daily_report_module():
 
 
 # ============================================================
-# 4. MAIN PAGE CONFIG & THEME SETUP
+# 4. MAIN PAGE CONFIG & MODERN MINIMAL THEME
 # ============================================================
 
 st.set_page_config(
@@ -464,7 +522,7 @@ st.markdown(
         font-size: 1.5rem;
         font-weight: 800;
         letter-spacing: -0.5px;
-        margin-bottom: 1rem;
+        margin-bottom: 0.2rem;
     }
     div[data-testid="stMetric"] {
         border-radius: 12px;
@@ -476,15 +534,18 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# Sidebar Branding Logo Integration
 try:
   st.sidebar.image(
       'https://uoturath.edu.iq/wp-content/uploads/2025/03/shield-1.png',
-      width=100,
+      width=90,
   )
 except Exception:
   st.sidebar.title('ALTURATH HR')
 
-st.sidebar.markdown('**ALTURATH UNIVERSITY**\nHuman Resources System')
+st.sidebar.markdown(
+    '**ALTURATH UNIVERSITY**\nHuman Resources & Biometric System'
+)
 st.sidebar.markdown('---')
 
 app_mode = st.sidebar.selectbox(
