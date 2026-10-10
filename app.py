@@ -40,7 +40,8 @@ def extract_date_from_filename(filename):
 def clean_arabic_name(name):
   """Normalizes Arabic names by removing department tags, diacritics,
 
-  unifying Alef/Hamza variants (e.g., ضفير/ظفير), and standardizing Taa Marbuta.
+  unifying Alef/Hamza variants, standardizing Taa Marbuta/Haa, and unifying
+  confusable letters like ظ/ض.
   """
   if not isinstance(name, str):
     return ''
@@ -53,6 +54,8 @@ def clean_arabic_name(name):
   base = re.sub(r'[إأآٱؤئءإ]', 'ا', base)
   # Standardize Taa Marbuta and Haa (رقيه / رقية)
   base = base.replace('ة', 'ه')
+  # Unify common name spelling variations (ضفير / ظفير)
+  base = base.replace('ظ', 'ض')
   # Normalize spacing
   base = ' '.join(base.split())
   return base
@@ -285,12 +288,9 @@ def create_daily_excel(df_final, target_date):
         'font_size': 9,
     })
 
-    # Requested Title Format: جامعة التراث - الموقف اليومي — YYYY/MM/DD
-    formatted_date_str = target_date.strftime('%Y/%m/%d')
+    # Exact Requested Title Format
     worksheet.merge_range(
-        'A1:F1',
-        f'جامعة التراث - الموقف اليومي — {formatted_date_str}',
-        title_format,
+        'A1:F1', 'جامعة التراث - الموقف اليومي', title_format
     )
     worksheet.merge_range(
         'A2:F2',
@@ -337,6 +337,7 @@ def create_daily_excel(df_final, target_date):
     worksheet.set_column('E:E', 23)
     worksheet.set_column('F:F', 18)
 
+    # Freeze panes on the first 3 rows (Title, Subtitle, and Headers)
     worksheet.freeze_panes(3, 0)
     worksheet.hide_gridlines(2)
 
