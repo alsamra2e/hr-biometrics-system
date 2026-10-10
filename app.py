@@ -36,11 +36,9 @@ st.set_page_config(
 
 
 def apply_theme():
-
   st.markdown(
       """
 <style>
-
 :root {
     --navy: #071426;
     --navy2: #0d2038;
@@ -58,24 +56,12 @@ def apply_theme():
     --white: #ffffff;
 }
 
-/* ---------- GLOBAL ---------- */
-
-html,
-body,
-.stApp,
-[data-testid="stAppViewContainer"] {
+html, body, .stApp, [data-testid="stAppViewContainer"] {
     background: var(--bg) !important;
 }
 
-.stApp,
-.stApp * {
-    font-family:
-        Inter,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Arial,
-        sans-serif;
+.stApp, .stApp * {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
 }
 
 .block-container {
@@ -87,16 +73,8 @@ body,
     padding-right: 2rem !important;
 }
 
-/* ---------- SIDEBAR ---------- */
-
 section[data-testid="stSidebar"] {
-    background:
-        linear-gradient(
-            180deg,
-            #061221 0%,
-            #091a2d 50%,
-            #0b213b 100%
-        ) !important;
+    background: linear-gradient(180deg, #061221 0%, #091a2d 50%, #0b213b 100%) !important;
     border-right: 1px solid #20344d !important;
 }
 
@@ -119,17 +97,8 @@ section[data-testid="stSidebar"] h3 {
     font-size: 0.85rem !important;
 }
 
-/* Sidebar inputs */
-
-section[data-testid="stSidebar"]
-div[data-baseweb="select"] > div {
-    background: #10243c !important;
-    border: 1px solid #2b425e !important;
-    border-radius: 10px !important;
-}
-
-section[data-testid="stSidebar"]
-div[data-baseweb="input"] {
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div,
+section[data-testid="stSidebar"] div[data-baseweb="input"] {
     background: #10243c !important;
     border: 1px solid #2b425e !important;
     border-radius: 10px !important;
@@ -139,217 +108,15 @@ section[data-testid="stSidebar"] input {
     color: #ffffff !important;
 }
 
-/* Sidebar uploader */
-
-section[data-testid="stSidebar"]
-[data-testid="stFileUploaderDropzone"] {
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
     background: #0e2035 !important;
     border: 1px dashed #36516e !important;
     border-radius: 10px !important;
 }
 
-section[data-testid="stSidebar"]
-[data-testid="stFileUploaderDropzoneInstructions"] {
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] {
     color: #9fb1c6 !important;
 }
-
-/* ---------- SIDEBAR BRAND ---------- */
-
-.sidebar-brand {
-    padding: 0.25rem 0.2rem 1.2rem 0.2rem;
-}
-
-.sidebar-logo {
-    width: 68px;
-    height: 68px;
-    object-fit: contain;
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 7px;
-    margin-bottom: 0.7rem;
-    box-shadow: 0 12px 28px rgba(0,0,0,0.28);
-}
-
-.sidebar-brand-name {
-    color: #ffffff;
-    font-size: 1.05rem;
-    font-weight: 850;
-    letter-spacing: 0.5px;
-}
-
-.sidebar-brand-sub {
-    color: #7287a0;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 1.4px;
-    margin-top: 0.25rem;
-}
-
-/* ---------- TOP BRAND ---------- */
-
-.top-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 0.85rem;
-}
-
-.top-brand-logo {
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-    background: #ffffff;
-    border: 1px solid #dbe3ed;
-    border-radius: 13px;
-    padding: 5px;
-    box-shadow: 0 5px 14px rgba(15,23,42,0.06);
-}
-
-.top-brand-title {
-    color: #0f172a;
-    font-size: 0.92rem;
-    font-weight: 850;
-}
-
-.top-brand-subtitle {
-    color: #64748b;
-    font-size: 0.68rem;
-    margin-top: 2px;
-}
-
-/* ---------- HERO ---------- */
-
-.hero-card {
-    position: relative;
-    overflow: hidden;
-
-    background:
-        linear-gradient(
-            135deg,
-            #061322 0%,
-            #0b1e35 55%,
-            #123354 100%
-        );
-
-    border: 1px solid #203b59;
-    border-radius: 20px;
-
-    padding: 1.8rem 2rem;
-    margin-bottom: 0.9rem;
-
-    box-shadow:
-        0 18px 45px rgba(15,23,42,0.12);
-}
-
-.hero-card::before {
-    content: "";
-    position: absolute;
-    width: 320px;
-    height: 320px;
-    right: -150px;
-    top: -190px;
-    border-radius: 50%;
-
-    background:
-        radial-gradient(
-            circle,
-            rgba(37,99,235,0.35),
-            rgba(37,99,235,0) 70%
-        );
-}
-
-.hero-card::after {
-    content: "";
-    position: absolute;
-    width: 180px;
-    height: 180px;
-    right: 80px;
-    bottom: -140px;
-    border-radius: 50%;
-
-    background:
-        radial-gradient(
-            circle,
-            rgba(6,182,212,0.18),
-            rgba(6,182,212,0) 70%
-        );
-}
-
-.hero-kicker {
-    position: relative;
-    z-index: 2;
-
-    color: #60a5fa;
-    font-size: 0.65rem;
-    font-weight: 850;
-    letter-spacing: 1.8px;
-    margin-bottom: 0.45rem;
-}
-
-.hero-title {
-    position: relative;
-    z-index: 2;
-
-    color: #ffffff;
-    font-size: clamp(1.35rem, 3vw, 2rem);
-    font-weight: 850;
-    line-height: 1.15;
-    margin: 0;
-}
-
-.hero-text {
-    position: relative;
-    z-index: 2;
-
-    color: #aab9ca;
-    font-size: 0.8rem;
-    line-height: 1.65;
-    margin-top: 0.65rem;
-    max-width: 800px;
-}
-
-/* ---------- DATE CARD ---------- */
-
-.date-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-
-    background: #ffffff;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-
-    padding: 0.85rem 1rem;
-    margin-bottom: 0.9rem;
-
-    box-shadow: 0 5px 18px rgba(15,23,42,0.035);
-}
-
-.date-main {
-    color: #0f172a;
-    font-size: 0.92rem;
-    font-weight: 850;
-}
-
-.date-sub {
-    color: #64748b;
-    font-size: 0.7rem;
-    margin-top: 0.18rem;
-}
-
-.checkout-pill {
-    color: #1d4ed8;
-    background: #eff6ff;
-    border: 1px solid #dbeafe;
-    border-radius: 999px;
-    padding: 0.42rem 0.7rem;
-    font-size: 0.68rem;
-    font-weight: 800;
-    white-space: nowrap;
-}
-
-/* ---------- METRICS ---------- */
 
 div[data-testid="stMetric"] {
     background: #ffffff !important;
@@ -371,17 +138,13 @@ div[data-testid="stMetricValue"] {
     font-weight: 850 !important;
 }
 
-/* ---------- SECTIONS ---------- */
-
 .section-heading {
     display: flex;
     align-items: center;
     gap: 9px;
-
     color: #0f172a;
     font-size: 0.98rem;
     font-weight: 850;
-
     margin-top: 1.35rem;
     margin-bottom: 0.65rem;
 }
@@ -391,36 +154,24 @@ div[data-testid="stMetricValue"] {
     width: 4px;
     height: 18px;
     border-radius: 10px;
-    background:
-        linear-gradient(
-            180deg,
-            #2563eb,
-            #06b6d4
-        );
+    background: linear-gradient(180deg, #2563eb, #06b6d4);
 }
-
-/* ---------- INFO ---------- */
 
 .info-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-left: 4px solid #2563eb;
     border-radius: 12px;
-
     padding: 0.85rem 1rem;
-
     color: #475569;
     font-size: 0.75rem;
     line-height: 1.8;
-
     margin: 0.75rem 0;
 }
 
 .info-card strong {
     color: #0f172a;
 }
-
-/* ---------- DATAFRAME ---------- */
 
 div[data-testid="stDataFrame"] {
     width: 100%;
@@ -430,168 +181,15 @@ div[data-testid="stDataFrame"] {
     box-shadow: 0 6px 20px rgba(15,23,42,0.04);
 }
 
-/* ---------- BUTTONS ---------- */
-
-.stButton > button,
-.stDownloadButton > button {
+.stButton > button, .stDownloadButton > button {
     min-height: 42px !important;
-
     border-radius: 10px !important;
-
-    background:
-        linear-gradient(
-            135deg,
-            #2563eb,
-            #1d4ed8
-        ) !important;
-
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
     color: #ffffff !important;
-
     border: 1px solid #2563eb !important;
-
     font-weight: 750 !important;
-
-    box-shadow:
-        0 6px 16px rgba(37,99,235,0.15);
-
-    transition:
-        transform .15s ease,
-        box-shadow .15s ease;
+    box-shadow: 0 6px 16px rgba(37,99,235,0.15);
 }
-
-.stButton > button:hover,
-.stDownloadButton > button:hover {
-    transform: translateY(-1px);
-
-    box-shadow:
-        0 9px 22px rgba(37,99,235,0.22);
-}
-
-/* ---------- FILE UPLOADER ---------- */
-
-[data-testid="stFileUploaderDropzone"] {
-    border-radius: 12px !important;
-}
-
-/* ---------- TOGGLE ---------- */
-
-[data-testid="stToggle"] {
-    margin-bottom: 0.3rem;
-}
-
-/* ---------- FOOTER ---------- */
-
-.footer {
-    text-align: center;
-    color: #94a3b8;
-    font-size: 0.64rem;
-    padding: 2rem 0 0.5rem 0;
-}
-
-/* ---------- RESPONSIVE ---------- */
-
-@media (max-width: 1100px) {
-
-    .block-container {
-        padding-left: 1.25rem !important;
-        padding-right: 1.25rem !important;
-    }
-}
-
-@media (max-width: 900px) {
-
-    .block-container {
-        padding-top: 0.8rem !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
-    }
-
-    .hero-card {
-        padding: 1.3rem 1.2rem;
-        border-radius: 16px;
-    }
-
-    .hero-title {
-        font-size: 1.4rem;
-    }
-
-    .date-card {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .checkout-pill {
-        white-space: normal;
-    }
-}
-
-@media (max-width: 600px) {
-
-    .block-container {
-        padding-left: 0.55rem !important;
-        padding-right: 0.55rem !important;
-    }
-
-    .top-brand {
-        margin-bottom: 0.65rem;
-    }
-
-    .top-brand-logo {
-        width: 42px;
-        height: 42px;
-    }
-
-    .top-brand-title {
-        font-size: 0.78rem;
-    }
-
-    .top-brand-subtitle {
-        font-size: 0.59rem;
-    }
-
-    .hero-card {
-        padding: 1.1rem;
-        border-radius: 15px;
-    }
-
-    .hero-kicker {
-        font-size: 0.55rem;
-        letter-spacing: 1.1px;
-    }
-
-    .hero-title {
-        font-size: 1.2rem;
-    }
-
-    .hero-text {
-        font-size: 0.7rem;
-    }
-
-    .date-card {
-        padding: 0.75rem;
-    }
-
-    div[data-testid="stMetric"] {
-        padding: 0.55rem !important;
-    }
-
-    div[data-testid="stMetricLabel"] {
-        font-size: 0.6rem !important;
-    }
-
-    div[data-testid="stMetricValue"] {
-        font-size: 1.05rem !important;
-    }
-
-    .section-heading {
-        font-size: 0.88rem;
-    }
-
-    .info-card {
-        font-size: 0.68rem;
-    }
-}
-
 </style>
         """,
       unsafe_allow_html=True,
@@ -607,10 +205,7 @@ apply_theme()
 
 def get_logo_path():
   base_dir = os.path.dirname(os.path.abspath(__file__))
-  candidates = [
-      os.path.join(base_dir, LOCAL_LOGO),
-      LOCAL_LOGO,
-  ]
+  candidates = [os.path.join(base_dir, LOCAL_LOGO), LOCAL_LOGO]
   for path in candidates:
     if os.path.isfile(path):
       return path
@@ -630,54 +225,38 @@ def get_logo_base64():
 
 def show_sidebar_brand():
   encoded = get_logo_base64()
-  if encoded:
-    st.sidebar.markdown(
-        f"""
-<div class="sidebar-brand">
-    <img class="sidebar-logo" src="data:image/png;base64,{encoded}">
-    <div class="sidebar-brand-name">ALTURATH HR</div>
-    <div class="sidebar-brand-sub">BIOMETRIC ATTENDANCE SYSTEM</div>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-  else:
-    st.sidebar.markdown(
-        """
-<div class="sidebar-brand">
-    <div class="sidebar-brand-name">ALTURATH HR</div>
-    <div class="sidebar-brand-sub">BIOMETRIC ATTENDANCE SYSTEM</div>
-</div>
-        """,
+  with st.sidebar:
+    if encoded:
+      st.markdown(
+          f'<img src="data:image/png;base64,{encoded}"'
+          ' style="width:68px;height:68px;object-fit:contain;background:#ffffff;border-radius:16px;padding:7px;margin-bottom:0.7rem;box-shadow:0'
+          ' 12px 28px rgba(0,0,0,0.28);" alt="Logo">',
+          unsafe_allow_html=True,
+      )
+    st.markdown(
+        "### ALTURATH HR\n<p"
+        ' style="color:#7287a0;font-size:0.62rem;font-weight:700;letter-spacing:1.4px;margin-top:-10px;">BIOMETRIC'
+        ' ATTENDANCE SYSTEM</p>',
         unsafe_allow_html=True,
     )
 
 
 def show_top_brand():
   encoded = get_logo_base64()
-  if encoded:
+  col1, col2 = st.columns([0.05, 0.95])
+  with col1:
+    if encoded:
+      st.markdown(
+          f'<img src="data:image/png;base64,{encoded}"'
+          ' style="width:48px;height:48px;object-fit:contain;background:#ffffff;border:1px'
+          ' solid #dbe3ed;border-radius:13px;padding:5px;" alt="Logo">',
+          unsafe_allow_html=True,
+      )
+  with col2:
     st.markdown(
-        f"""
-<div class="top-brand">
-    <img class="top-brand-logo" src="data:image/png;base64,{encoded}">
-    <div>
-        <div class="top-brand-title">ALTURATH UNIVERSITY</div>
-        <div class="top-brand-subtitle">Human Resources • Biometric Attendance</div>
-    </div>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-  else:
-    st.markdown(
-        """
-<div class="top-brand">
-    <div>
-        <div class="top-brand-title">ALTURATH UNIVERSITY</div>
-        <div class="top-brand-subtitle">Human Resources • Biometric Attendance</div>
-    </div>
-</div>
-        """,
+        "**ALTURATH UNIVERSITY**\n<p"
+        ' style="color:#64748b;font-size:0.68rem;margin-top:-12px;">Human'
+        " Resources • Biometric Attendance</p>",
         unsafe_allow_html=True,
     )
 
@@ -855,7 +434,9 @@ def build_daily_attendance(df_logs, target_date, current_weekday_ar, df_off):
   previous_date = target_date - timedelta(days=1)
 
   for name in sorted(master_names):
-    person = df_logs[df_logs["Name"].astype(str).str.strip() == str(name).strip()].copy()
+    person = df_logs[
+        df_logs["Name"].astype(str).str.strip() == str(name).strip()
+    ].copy()
     person = person.sort_values("dt")
 
     today_checkins = person[
@@ -1151,41 +732,16 @@ def create_word_doc(df):
 
 
 def daily_hero():
-  st.markdown(
-      """
-<div class="hero-card">
-    <div class="hero-kicker">
-        ALTURATH UNIVERSITY • HUMAN RESOURCES
-    </div>
-    <div class="hero-title">
-        Daily Biometric Attendance
-    </div>
-    <div class="hero-text">
-        سجل الحضور اليومي للموارد البشرية —
-        دخول اليوم وخروج اليوم السابق وفق آلية
-        التسليم المعتمدة لدى قسم الموارد البشرية.
-    </div>
-</div>
-        """,
-      unsafe_allow_html=True,
+  st.info(
+      "**ALTURATH UNIVERSITY • HUMAN RESOURCES**\n\n### Daily Biometric"
+      " Attendance\n\nسجل الحضور اليومي للموارد البشرية — دخول اليوم وخروج اليوم"
+      " السابق وفق آلية التسليم المعتمدة لدى قسم الموارد البشرية."
   )
 
 
 def exceptions_hero():
-  st.markdown(
-      """
-<div class="hero-card">
-    <div class="hero-kicker">
-        ALTURATH UNIVERSITY • HUMAN RESOURCES
-    </div>
-    <div class="hero-title">
-        Attendance Exceptions & Violations
-    </div>
-    <div class="hero-text">
-        سجل الاستثناءات والتأخير والغيابات —
-        متابعة حالات التأخير المتكرر والغياب للمنتسبين.
-    </div>
-</div>
-        """,
-      unsafe_allow_html=True,
+  st.info(
+      "**ALTURATH UNIVERSITY • HUMAN RESOURCES**\n\n### Attendance Exceptions &"
+      " Violations\n\nسجل الاستثناءات والتأخير والغيابات — متابعة حالات التأخير"
+      " المتكرر والغياب للمنتسبين."
   )
