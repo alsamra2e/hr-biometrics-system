@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from io import BytesIO
 import re
 
@@ -8,7 +8,6 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 import pandas as pd
-import plotly.express as px
 import requests
 import streamlit as st
 
@@ -192,6 +191,18 @@ def run_exceptions_module():
 # ============================================================
 
 
+def classify_gate_event(event_value, punch_datetime):
+  event = str(event_value).strip()
+  punch_time = punch_datetime.time()
+  if 'دخول' in event:
+    return 'Check-In'
+  if 'خروج' in event:
+    if punch_time < time(12, 0):
+      return 'Check-In'
+    return 'Check-Out'
+  return None
+
+
 def run_daily_report_module():
   st.markdown(
       '<div class="main-header">Daily Biometric Attendance Audit</div>',
@@ -233,29 +244,83 @@ def run_daily_report_module():
       '📅 Weekly Day-Off List', type=['xlsx', 'xls']
   )
 
-  def process_gate(file, g_name):
+  def process_gate(file, gate_name):
     try:
-      engine = 'xlrd' if file.name.endswith('.xls') else 'openpyxl'
+      engine = 'xlrd' if file.name.lower().endswith('.xls') else 'openpyxl'
       df = pd.read_excel(file, engine=engine)
       df.columns = [str(c).strip() for c in df.columns]
+
+      name_col = (
+          'الاسم'
+          if 'الاسم' in df.columns
+          else ('الإسم' if 'الإسم' in df.columns else None)
+      )
+      if not name_col or 'الوقت' not in df.columns:
+        return pd.DataFrame()
+
+      df['Name'] = df[name_col].astype(str).str.strip()
       df['dt'] = pd.to_datetime(df['الوقت'], errors='coerce')
-      df = df[df['dt'].dt.date == target_date]
+      df = df[df['dt'].notna()].copy()
+
+      if 'Event' in df.columns:
+        df['Event_Type'] = df.apply(
+            lambda row: classify_gate_event(row['Event'], row['dt']), axis=1
+        )
+      else:
+        df['Event_Type'] = 'Check-In'
+
+      df = df[df['Event_Type'].notna()].copy()
+      df['Date'] = df['dt'].dt.date
       df['Time'] = df['dt'].dt.strftime('%H:%M')
-      df = df.rename(columns={'الاسم': 'Name', 'الإسم': 'Name'})
-      return df[['Name', 'Time']].assign(Source=g_name)
+      df['Source'] = gate_name
+      return df[
+          ['Name', 'dt', 'Date', 'Time', 'Event_Type', 'Source']
+      ].sort_values('dt')
     except Exception:
       return pd.DataFrame()
 
   def process_app(file):
     try:
       df = pd.read_excel(file, header=3)
-      df = df[df['الحالة'].isin(['حاضر', 'Present'])]
-      df['Time'] = pd.to_datetime(df['دخول'], errors='coerce').dt.strftime(
-          '%H:%M'
-      )
-      return pd.DataFrame(
-          {'Name': df['الاسم'], 'Time': df['Time'], 'Source': 'App'}
-      )
+      df.columns = [str(c).strip() for c in df.columns]
+      if 'الاسم' not in df.columns:
+        return pd.DataFrame()
+
+      result = []
+      if 'دخول' in df.columns:
+        for _, row in df.iterrows():
+          dt = pd.to_datetime(row['دخول'], errors='coerce')
+          if pd.notna(dt):
+            result.append({
+                'Name': str(row['الاسم']).strip(),
+                'dt': dt,
+                'Date': dt.date(),
+                'Time': dt.strftime('%H:%M'),
+                'Event_Type': 'Check-In',
+                'Source': 'Mawjood App',
+            })
+
+      checkout_columns = [
+          'خروج',
+          'الانصراف',
+          'وقت الخروج',
+          'Check-Out',
+          'Checkout',
+      ]
+      chk_col = next((c for c in checkout_columns if c in df.columns), None)
+      if chk_col:
+        for _, row in df.iterrows():
+          dt = pd.to_datetime(row[chk_col], errors='coerce')
+          if pd.notna(dt):
+            result.append({
+                'Name': str(row['الاسم']).strip(),
+                'dt': dt,
+                'Date': dt.date(),
+                'Time': dt.strftime('%H:%M'),
+                'Event_Type': 'Check-Out',
+                'Source': 'Mawjood App',
+            })
+      return pd.DataFrame(result)
     except Exception:
       return pd.DataFrame()
 
@@ -268,13 +333,12 @@ def run_daily_report_module():
     all_logs.append(process_app(f_app))
 
   if all_logs or f_weekly:
-    df_present = (
+    df_logs = (
         pd.concat(all_logs, ignore_index=True)
         if all_logs
-        else pd.DataFrame(columns=['Name', 'Time', 'Source'])
-    )
-    df_present = df_present.sort_values('Time').drop_duplicates(
-        subset=['Name'], keep='first'
+        else pd.DataFrame(
+            columns=['Name', 'dt', 'Date', 'Time', 'Event_Type', 'Source']
+        )
     )
 
     df_off = pd.DataFrame(columns=['Name', 'OffDay'])
@@ -283,40 +347,87 @@ def run_daily_report_module():
           columns={'الاسم الثلاثي': 'Name', 'الاجازة الاسبوعية': 'OffDay'}
       )
 
-    master_names = list(
-        set(df_present['Name'].tolist() + df_off['Name'].tolist())
-    )
-    final_data = []
+    master_names = set()
+    if not df_logs.empty:
+      master_names.update(
+          df_logs['Name'].dropna().astype(str).str.strip().tolist()
+      )
+    if not df_off.empty:
+      master_names.update(
+          df_off['Name'].dropna().astype(str).str.strip().tolist()
+      )
 
-    for name in master_names:
-      punch = df_present[df_present['Name'] == name]
-      off_info = df_off[df_off['Name'] == name]
+    final_data = []
+    previous_date = target_date - timedelta(days=1)
+
+    for name in sorted(master_names):
+      person = (
+          df_logs[df_logs['Name'].astype(str).str.strip() == str(name).strip()]
+          .copy()
+          .sort_values('dt')
+      )
+
+      today_checkins = person[
+          (person['Date'] == target_date)
+          & (person['Event_Type'] == 'Check-In')
+      ]
+      yesterday_checkouts = person[
+          (person['Date'] == previous_date)
+          & (person['Event_Type'] == 'Check-Out')
+      ]
+
+      check_in = '-'
+      check_in_source = '-'
+      if not today_checkins.empty:
+        first_in = today_checkins.iloc[0]
+        check_in = first_in['Time']
+        check_in_source = first_in['Source']
+
+      check_out = '-'
+      check_out_source = '-'
+      if not yesterday_checkouts.empty:
+        last_out = yesterday_checkouts.iloc[-1]
+        check_out = last_out['Time']
+        check_out_source = last_out['Source']
+
+      off_info = df_off[
+          df_off['Name'].astype(str).str.strip() == str(name).strip()
+      ]
       is_off = (
-          (off_info['OffDay'].iloc[0] == current_weekday_ar)
+          (str(off_info['OffDay'].iloc[0]).strip() == current_weekday_ar)
           if not off_info.empty
           else False
       )
 
-      row = {'Name': name, 'Check-In': '-', 'Source': '-', 'Status': ''}
-      if not punch.empty:
-        row['Check-In'] = punch['Time'].iloc[0]
-        row['Source'] = punch['Source'].iloc[0]
-        row['Status'] = (
-            '🔴 Late' if row['Check-In'] > threshold_str else '✅ On Time'
-        )
+      if check_in != '-':
+        status = '🔴 Late' if check_in > threshold_str else '🟢 On Time'
       elif is_off:
-        row['Status'] = '🟡 Weekly Off'
+        status = '🟡 Weekly Off'
+      elif check_out != '-':
+        status = '🟠 Check-Out Only'
       else:
-        row['Status'] = '❌ Absence'
-      final_data.append(row)
+        status = '🔴 Absence'
+
+      sources = [s for s in [check_in_source, check_out_source] if s != '-']
+      source_str = ' + '.join(dict.fromkeys(sources)) if sources else '-'
+
+      final_data.append({
+          'Name': name,
+          'Check-In': check_in,
+          'Check-Out': check_out,
+          'Source': source_str,
+          'Status': status,
+      })
 
     df_final = pd.DataFrame(final_data)
 
     col1, col2, col3 = st.columns(3)
     col1.metric('Total Employees', len(df_final))
-    col2.metric('On-Time', len(df_final[df_final['Status'] == '✅ On Time']))
+    col2.metric(
+        'On-Time', len(df_final[df_final['Status'].str.contains('On Time')])
+    )
     col3.metric(
-        'Lateness / Absences',
+        'Violations / Absences',
         len(
             df_final[
                 df_final['Status'].str.contains('Late|Absence', na=False)
@@ -349,38 +460,13 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-    :root {
-        --bg-color: #f8fafc;
-        --card-bg: #ffffff;
-        --accent-blue: #0284c7;
-        --text-primary: #0f172a;
-    }
-    
-    .stApp {
-        background-color: var(--bg-color);
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    
-    [data-testid="stSidebar"] {
-        background-color: #091e36 !important;
-        border-right: 1px solid #1e293b;
-    }
-    
-    [data-testid="stSidebar"] * {
-        color: #f1f5f9 !important;
-    }
-    
     .main-header {
         font-size: 1.5rem;
         font-weight: 800;
-        color: var(--text-primary);
         letter-spacing: -0.5px;
         margin-bottom: 1rem;
     }
-    
     div[data-testid="stMetric"] {
-        background-color: var(--card-bg);
-        border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 0.8rem 1rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -390,7 +476,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Sidebar Header & Branding Logo Integration
 try:
   st.sidebar.image(
       'https://uoturath.edu.iq/wp-content/uploads/2025/03/shield-1.png',
