@@ -910,3 +910,109 @@ def exceptions_hero():
         """),
       unsafe_allow_html=True,
   )
+
+
+# ============================================================
+# 13. MAIN APPLICATION FLOW
+# ============================================================
+
+
+def main():
+  show_sidebar_brand()
+
+  st.sidebar.markdown("---")
+  st.sidebar.subheader("Navigation")
+  app_mode = st.sidebar.radio(
+      "Select Module", ["Daily Attendance", "Exceptions & Violations"]
+  )
+
+  st.sidebar.markdown("---")
+  st.sidebar.subheader("Attendance Sources")
+  file_zaqura = st.sidebar.file_uploader(
+      "Zaqura Gate File", type=["xlsx", "xls"]
+  )
+  file_mawjood = st.sidebar.file_uploader(
+      "Mawjood App File", type=["xlsx", "xls"]
+  )
+  file_off = st.sidebar.file_uploader(
+      "Weekly Off Schedule (Optional)", type=["xlsx", "xls"]
+  )
+
+  target_date = st.sidebar.date_input("Attendance Target Date", value=date.today())
+
+  if app_mode == "Daily Attendance":
+    show_top_brand()
+    daily_hero()
+
+    if file_zaqura or file_mawjood:
+      df_z = (
+          process_gate(file_zaqura, "Zaqura Gate")
+          if file_zaqura
+          else pd.DataFrame()
+      )
+      df_m = process_app(file_mawjood) if file_mawjood else pd.DataFrame()
+
+      dfs_to_concat = [d for d in [df_z, df_m] if not d.empty]
+      df_logs = (
+          pd.concat(dfs_to_concat, ignore_index=True)
+          if dfs_to_concat
+          else pd.DataFrame()
+      )
+
+      df_off = pd.read_excel(file_off) if file_off else pd.DataFrame()
+
+      weekdays_ar = [
+          "الإثنين",
+          "الثلاثاء",
+          "الأربعاء",
+          "الخميس",
+          "الجمعة",
+          "السبت",
+          "الأحد",
+      ]
+      current_weekday_ar = weekdays_ar[target_date.weekday()]
+
+      if not df_logs.empty:
+        df_final = build_daily_attendance(
+            df_logs, target_date, current_weekday_ar, df_off
+        )
+
+        st.markdown(
+            '<div class="section-heading">Attendance Processing'
+            " Results</div>",
+            unsafe_allow_html=True,
+        )
+        st.dataframe(df_final, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+          excel_bytes = create_daily_excel(df_final, target_date)
+          st.download_button(
+              label="📥 Download Excel Report",
+              data=excel_bytes,
+              file_name=f"Attendance_{target_date}.xlsx",
+              mime=(
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              ),
+          )
+      else:
+        st.warning(
+            "No valid attendance records found in the uploaded files."
+        )
+    else:
+      st.info(
+          "👈 Please upload your biometric attendance files from the sidebar"
+          " to generate the daily report."
+      )
+
+  elif app_mode == "Exceptions & Violations":
+    show_top_brand()
+    exceptions_hero()
+    st.info(
+        "Upload your attendance records via the sidebar to view late arrivals"
+        " and absences."
+    )
+
+
+if __name__ == "__main__":
+  main()
