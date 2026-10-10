@@ -45,10 +45,17 @@ def clean_arabic_name(name):
   """
   if not isinstance(name, str):
     return ''
-  base = re.split(r'[/\\-\(\)]', name)[0].strip()
+  # Safely split out department suffixes like '/الصيدلة' or ' - IT'
+  for sep in ['/', '\\', '-', '(', ')']:
+    name = name.split(sep)[0]
+  base = name.strip()
+  # Remove Arabic tashkeel (diacritics)
   base = re.sub(r'[\u064b-\u0652]', '', base)
+  # Unify Alef variants
   base = re.sub(r'[إأآٱ]', 'ا', base)
+  # Standardize Taa Marbuta and Haa for matching (رقيه / رقية)
   base = base.replace('ة', 'ه')
+  # Normalize whitespace
   base = ' '.join(base.split())
   return base
 
@@ -271,7 +278,7 @@ def run_daily_report_module():
       'Mhmd Bn Ali Gate File', type=['xlsx', 'xls']
   )
   f_weekly = st.sidebar.file_uploader(
-      '📅 Weekly Day-Off List File', type=['xlsx', 'xls']
+      '📅 Weekly Day-Off List File (Optional)', type=['xlsx', 'xls']
   )
 
   def process_gate(file, gate_name):
@@ -335,11 +342,30 @@ def run_daily_report_module():
 
     df_off = pd.DataFrame(columns=['Name', 'Raw_Name', 'OffDay'])
     if f_weekly:
-      off_raw = pd.read_excel(f_weekly).rename(
-          columns={'الاسم الثلاثي': 'Raw_Name', 'الاجازة الاسبوعية': 'OffDay'}
-      )
-      off_raw['Name'] = off_raw['Raw_Name'].apply(clean_arabic_name)
-      df_off = off_raw
+      try:
+        off_raw = pd.read_excel(f_weekly)
+        off_raw.columns = [str(c).strip() for c in off_raw.columns]
+        off_col = (
+            'الاسم الثلاثي'
+            if 'الاسم الثلاثي' in off_raw.columns
+            else (
+                'الاسم'
+                if 'الاسم' in off_raw.columns
+                else off_raw.columns[0]
+            )
+        )
+        day_col = (
+            'الاجازة الاسبوعية'
+            if 'الاجازة الاسبوعية' in off_raw.columns
+            else off_raw.columns[1]
+        )
+        off_raw = off_raw.rename(
+            columns={off_col: 'Raw_Name', day_col: 'OffDay'}
+        )
+        off_raw['Name'] = off_raw['Raw_Name'].apply(clean_arabic_name)
+        df_off = off_raw
+      except Exception:
+        pass
 
     name_display_map = {}
     if not df_logs.empty:
@@ -448,8 +474,8 @@ def run_daily_report_module():
       )
   else:
     st.info(
-        '👈 Please upload your gate log files and weekly off schedule from the'
-        ' sidebar to start.'
+        '👈 Please upload at least one gate log file (Zaqura or Mhmd Bn Ali) from'
+        ' the sidebar to start the daily audit.'
     )
 
 
