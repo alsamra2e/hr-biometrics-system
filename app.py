@@ -12,7 +12,7 @@ import requests
 import streamlit as st
 
 # ============================================================
-# 1. GLOBAL UTILITIES & ARABIC NAME NORMALIZATION
+# 1. GLOBAL UTILITIES & ADVANCED ARABIC NAME NORMALIZATION
 # ============================================================
 
 
@@ -40,17 +40,20 @@ def extract_date_from_filename(filename):
 def clean_arabic_name(name):
   """Normalizes Arabic names by removing department tags, diacritics,
 
-  unifying Alef variants, and standardizing Taa Marbuta/Haa for accurate
-  matching.
+  unifying Alef/Hamza variants (e.g., ضفير/ظفير), and standardizing Taa Marbuta.
   """
   if not isinstance(name, str):
     return ''
   for sep in ['/', '\\', '-', '(', ')']:
     name = name.split(sep)[0]
   base = name.strip()
+  # Remove Arabic tashkeel (diacritics)
   base = re.sub(r'[\u064b-\u0652]', '', base)
-  base = re.sub(r'[إأآٱ]', 'ا', base)
+  # Unify Alef and Hamza variants
+  base = re.sub(r'[إأآٱؤئءإ]', 'ا', base)
+  # Standardize Taa Marbuta and Haa (رقيه / رقية)
   base = base.replace('ة', 'ه')
+  # Normalize spacing
   base = ' '.join(base.split())
   return base
 
@@ -242,6 +245,12 @@ def create_daily_excel(df_final, target_date):
     worksheet = workbook.add_worksheet('Attendance')
     writer.sheets['Attendance'] = worksheet
 
+    # Page Setup for A4 Portrait & Print Properties
+    worksheet.set_paper(9)  # A4 size
+    worksheet.set_portrait()
+    worksheet.fit_to_pages(1, 0)  # Fit 1 page wide, auto height
+    worksheet.set_footer('&CPage &P of &N')  # Dynamic Page X of Y footer
+
     title_format = workbook.add_format({
         'bold': True,
         'font_size': 12,
@@ -276,8 +285,12 @@ def create_daily_excel(df_final, target_date):
         'font_size': 9,
     })
 
+    # Requested Title Format: جامعة التراث - الموقف اليومي — YYYY/MM/DD
+    formatted_date_str = target_date.strftime('%Y/%m/%d')
     worksheet.merge_range(
-        'A1:F1', 'كشف الحضور اليومي — ALTURATH HR', title_format
+        'A1:F1',
+        f'جامعة التراث - الموقف اليومي — {formatted_date_str}',
+        title_format,
     )
     worksheet.merge_range(
         'A2:F2',
