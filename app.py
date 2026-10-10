@@ -45,17 +45,12 @@ def clean_arabic_name(name):
   """
   if not isinstance(name, str):
     return ''
-  # Safely split out department suffixes like '/الصيدلة' or ' - IT'
   for sep in ['/', '\\', '-', '(', ')']:
     name = name.split(sep)[0]
   base = name.strip()
-  # Remove Arabic tashkeel (diacritics)
   base = re.sub(r'[\u064b-\u0652]', '', base)
-  # Unify Alef variants
   base = re.sub(r'[إأآٱ]', 'ا', base)
-  # Standardize Taa Marbuta and Haa for matching (رقيه / رقية)
   base = base.replace('ة', 'ه')
-  # Normalize whitespace
   base = ' '.join(base.split())
   return base
 
@@ -71,7 +66,6 @@ def create_word_doc(df):
   header = section.header
   htable = header.add_table(1, 3, width=Inches(6.5))
 
-  # Right: Arabic Header
   r = htable.rows[0].cells[0].paragraphs[0]
   r.text = (
       'جامعة التراث\nقسم الشؤون الإدارية والمالية\nشعبة الموارد البشرية'
@@ -79,7 +73,6 @@ def create_word_doc(df):
   r.alignment = WD_ALIGN_PARAGRAPH.RIGHT
   set_rtl(r)
 
-  # Middle: University Shield Logo
   m = htable.rows[0].cells[1].paragraphs[0]
   m.alignment = WD_ALIGN_PARAGRAPH.CENTER
   try:
@@ -91,7 +84,6 @@ def create_word_doc(df):
   except Exception:
     pass
 
-  # Left: English Header
   l = htable.rows[0].cells[2].paragraphs[0]
   l.text = (
       'University Of Alturath\nDept. Of Admin & Financial Affairs\nHR'
@@ -99,7 +91,6 @@ def create_word_doc(df):
   )
   l.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-  # Separator line
   p_line = doc.add_paragraph()
   run_line = p_line.add_run(
       '______________________________________________________________________'
@@ -107,7 +98,6 @@ def create_word_doc(df):
   run_line.font.color.rgb = RGBColor(0x8F, 0x0B, 0x0B)
   p_line.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-  # Official Body Text
   body = doc.add_paragraph(
       '\nنرفق لسيادتكم في ادناه الكشف الخاص بموقف الحضور والغياب لكادر العمل'
       ' الخاص بجامعة التراث وحسب كشف البصمة المرفق طيا نسخة منه ... راجين التفضل'
@@ -116,7 +106,6 @@ def create_word_doc(df):
   body.alignment = WD_ALIGN_PARAGRAPH.RIGHT
   set_rtl(body)
 
-  # Data Table
   table = doc.add_table(rows=1, cols=5)
   table.style = 'Table Grid'
   set_table_rtl(table)
@@ -141,7 +130,6 @@ def create_word_doc(df):
       cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
       set_rtl(cell.paragraphs[0])
 
-  # Official Signature Block
   doc.add_paragraph('\n\n')
   sig = doc.add_paragraph(
       'م.م محمد زهير طالب النقيب\nمدير قسم الشؤون الادارية والموارد البشرية'
@@ -217,7 +205,7 @@ def run_exceptions_module():
 
 
 # ============================================================
-# 3. DAILY REPORT MODULE
+# 3. DAILY REPORT MODULE & PROFESSIONAL EXCEL EXPORT
 # ============================================================
 
 
@@ -231,6 +219,116 @@ def classify_gate_event(event_value, punch_datetime):
       return 'Check-In'
     return 'Check-Out'
   return None
+
+
+def create_daily_excel(df_final, target_date):
+  buffer = BytesIO()
+  previous_date = target_date - timedelta(days=1)
+  export_df = df_final[
+      ['Name', 'Check-In', 'Check-Out', 'Source', 'Status']
+  ].copy()
+
+  with pd.ExcelWriter(
+      buffer,
+      engine='xlsxwriter',
+      engine_kwargs={
+          'options': {
+              'strings_to_urls': False,
+              'constant_memory': True,
+          }
+      },
+  ) as writer:
+    workbook = writer.book
+    worksheet = workbook.add_worksheet('Attendance')
+    writer.sheets['Attendance'] = worksheet
+
+    title_format = workbook.add_format({
+        'bold': True,
+        'font_size': 12,
+        'font_color': '#FFFFFF',
+        'bg_color': '#071426',
+        'align': 'center',
+        'valign': 'vcenter',
+    })
+    subtitle_format = workbook.add_format({
+        'font_size': 8,
+        'font_color': '#475569',
+        'bg_color': '#F8FAFC',
+        'align': 'center',
+        'valign': 'vcenter',
+    })
+    header_format = workbook.add_format({
+        'bold': True,
+        'font_color': '#FFFFFF',
+        'bg_color': '#2563EB',
+        'align': 'center',
+        'valign': 'vcenter',
+        'border': 1,
+        'border_color': '#CBD5E1',
+        'text_wrap': True,
+        'font_size': 9,
+    })
+    cell_format = workbook.add_format({
+        'align': 'center',
+        'valign': 'vcenter',
+        'border': 1,
+        'border_color': '#E2E8F0',
+        'font_size': 9,
+    })
+
+    worksheet.merge_range(
+        'A1:F1', 'كشف الحضور اليومي — ALTURATH HR', title_format
+    )
+    worksheet.merge_range(
+        'A2:F2',
+        (
+            f'تاريخ الحضور: {target_date.strftime("%d %b %Y")}    |    تاريخ'
+            f' الانصراف: {previous_date.strftime("%d %b %Y")}'
+        ),
+        subtitle_format,
+    )
+
+    worksheet.set_row(0, 24)
+    worksheet.set_row(1, 20)
+
+    headers = [
+        'ت\nNo.',
+        'الاسم\nName',
+        f'وقت الدخول\nCheck-In ({target_date.strftime("%d %b")})',
+        f'وقت الانصراف\nCheck-Out ({previous_date.strftime("%d %b")})',
+        'المصدر\nSource',
+        'الحالة\nStatus',
+    ]
+
+    for col, header in enumerate(headers):
+      worksheet.write(2, col, header, header_format)
+
+    worksheet.set_row(2, 34)
+
+    for i, (_, row) in enumerate(export_df.iterrows()):
+      excel_row = i + 3
+      values = [
+          i + 1,
+          str(row['Name']),
+          str(row['Check-In']),
+          str(row['Check-Out']),
+          str(row['Source']),
+          str(row['Status']),
+      ]
+      for col, value in enumerate(values):
+        worksheet.write(excel_row, col, value, cell_format)
+
+    worksheet.set_column('A:A', 6)
+    worksheet.set_column('B:B', 30)
+    worksheet.set_column('C:D', 19)
+    worksheet.set_column('E:E', 23)
+    worksheet.set_column('F:F', 18)
+
+    worksheet.freeze_panes(3, 0)
+    worksheet.hide_gridlines(2)
+
+  buffer.seek(0)
+  return buffer.getvalue()
 
 
 def run_daily_report_module():
@@ -251,7 +349,6 @@ def run_daily_report_module():
       else st.sidebar.date_input('Audit Date', value=date.today())
   )
 
-  # Interactive Lateness Threshold Selector
   threshold_time = st.sidebar.time_input(
       '⏱️ Lateness Threshold', value=time(8, 35)
   )
@@ -418,9 +515,9 @@ def run_daily_report_module():
       is_off = False
       if not off_info.empty:
         off_val = str(off_info['OffDay'].iloc[0])
-        off_days = [
-            d.strip() for d in re.split(r'[,،/\\-\s]+', off_val) if d.strip()
-        ]
+        for sep in [',', '،', '/', '\\', '-']:
+          off_val = off_val.replace(sep, ' ')
+        off_days = [d.strip() for d in off_val.split() if d.strip()]
         is_off = current_weekday_ar in off_days
 
       if check_in != '-':
@@ -463,14 +560,14 @@ def run_daily_report_module():
       st.markdown('---')
       st.dataframe(df_final, use_container_width=True)
 
-      buf = BytesIO()
-      with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
-        df_final.to_excel(writer, index=False, sheet_name='Audit', startrow=1)
-
+      excel_bytes = create_daily_excel(df_final, target_date)
       st.download_button(
           '📥 Export Daily Excel Report',
-          buf.getvalue(),
-          f'HR_Report_{target_date}.xlsx',
+          excel_bytes,
+          file_name=f'Attendance_{target_date}.xlsx',
+          mime=(
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          ),
       )
   else:
     st.info(
@@ -506,7 +603,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Sidebar Branding Logo Integration
 try:
   st.sidebar.image(
       'https://uoturath.edu.iq/wp-content/uploads/2025/03/shield-1.png',
