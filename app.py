@@ -60,7 +60,6 @@ def extract_date_from_filename(filename):
 
 def clean_arabic_name(name):
   """Normalizes Arabic names by removing department tags, diacritics,
-
   unifying Alef/Hamza variants, standardizing Taa Marbuta/Haa, and unifying
   confusable letters like ظ/ض.
   """
@@ -245,9 +244,8 @@ def classify_gate_event(event_value, punch_datetime):
   return None
 
 
-def create_daily_excel(df_final, target_date, current_weekday_ar):
+def create_daily_excel(df_final, target_date, current_weekday_ar, checkout_date):
   buffer = BytesIO()
-  previous_date = target_date - timedelta(days=1)
 
   ar_map = {
       "Monday": "الاثنين",
@@ -258,7 +256,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
       "Saturday": "السبت",
       "Sunday": "الاحد",
   }
-  prev_weekday_ar = ar_map.get(previous_date.strftime("%A"), "")
+  checkout_weekday_ar = ar_map.get(checkout_date.strftime("%A"), "")
 
   export_df = df_final[
       ["Name", "Check-In", "Check-Out", "In_Source", "Out_Source", "Status"]
@@ -385,8 +383,8 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
 
     date_subtitle = (
         f'تاريخ الحضور: {current_weekday_ar} ({target_date.strftime("%Y/%m/%d")})'
-        f'    |    تاريخ الانصراف: {prev_weekday_ar}'
-        f' ({previous_date.strftime("%Y/%m/%d")})'
+        f'    |    تاريخ الانصراف: {checkout_weekday_ar}'
+        f' ({checkout_date.strftime("%Y/%m/%d")})'
     )
     worksheet.merge_range("A2:F2", date_subtitle, subtitle_format)
 
@@ -397,7 +395,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "ت\nNo.",
         "الاسم\nName",
         f"وقت الدخول\nCheck-In ({target_date.strftime('%d %b')})",
-        f"وقت الانصراف\nCheck-Out ({previous_date.strftime('%d %b')})",
+        f"وقت الانصراف\nCheck-Out ({checkout_date.strftime('%d %b')})",
         "المصدر\nSource",
         "الحالة\nStatus",
     ]
@@ -428,7 +426,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
       else:
         worksheet.write(excel_row, 3, checkout_val, cell_format)
 
-      # Build Source Badges (regular font weight)
+      # Build Source Badges
       if in_src != "-" and out_src != "-" and in_src != out_src:
         worksheet.write_rich_string(
             excel_row,
@@ -468,7 +466,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
       else:
         worksheet.write(excel_row, 4, "-", cell_format)
 
-      # Non-bold status styling
+      # Dynamic Non-Bold Status Styling
       if "On Time" in status_str or "🟢" in status_str:
         worksheet.write(excel_row, 5, status_str, status_fmt_green)
       elif "Late" in status_str:
@@ -528,11 +526,17 @@ def run_daily_report_module():
       "Sunday": "الاحد",
   }
   current_weekday_ar = weekdays_ar.get(target_date.strftime("%A"), "")
-  previous_date = target_date - timedelta(days=1)
-  previous_weekday_ar = weekdays_ar.get(previous_date.strftime("%A"), "")
+  
+  # Determine Check-Out Date (If Saturday and Friday was non-working, bridge back to Thursday)
+  if target_date.strftime("%A") == "Saturday":
+    checkout_date = target_date - timedelta(days=2) # Thursday
+  else:
+    checkout_date = target_date - timedelta(days=1) # T-1
+    
+  checkout_weekday_ar = weekdays_ar.get(checkout_date.strftime("%A"), "")
 
   st.sidebar.info(
-      f"Audit Day: **{current_weekday_ar}**\n\nCutoff: **{threshold_str}**"
+      f"Audit Day: **{current_weekday_ar}**\n\nCheck-Out Day: **{checkout_weekday_ar}**\n\nCutoff: **{threshold_str}**"
   )
 
   st.sidebar.markdown("---")
@@ -582,8 +586,8 @@ def run_daily_report_module():
       )
       df["Source"] = clean_gate_name
 
-      prev_d = target_date - timedelta(days=1)
-      df = df[(df["Date"] == target_date) | (df["Date"] == prev_d)]
+      # Keep logs for target_date and checkout_date (handles Friday/Thursday bridges)
+      df = df[(df["Date"] == target_date) | (df["Date"] == checkout_date)]
 
       return df[
           ["Name", "Raw_Name", "dt", "Date", "Time", "Event_Type", "Source"]
@@ -668,8 +672,8 @@ def run_daily_report_module():
           (person["Date"] == target_date)
           & (person["Event_Type"] == "Check-In")
       ]
-      yesterday_checkouts = person[
-          (person["Date"] == previous_date)
+      past_checkouts = person[
+          (person["Date"] == checkout_date)
           & (person["Event_Type"] == "Check-Out")
       ]
 
@@ -682,8 +686,8 @@ def run_daily_report_module():
 
       check_out = "-"
       check_out_source = "-"
-      if not yesterday_checkouts.empty:
-        last_out = yesterday_checkouts.iloc[-1]
+      if not past_checkouts.empty:
+        last_out = past_checkouts.iloc[-1]
         check_out = last_out["Time"]
         check_out_source = last_out["Source"]
 
@@ -697,7 +701,7 @@ def run_daily_report_module():
           off_val = off_val.replace(sep, " ")
         off_days = [d.strip() for d in off_val.split() if d.strip()]
         is_checkin_off = current_weekday_ar in off_days
-        is_checkout_off = previous_weekday_ar in off_days
+        is_checkout_off = checkout_weekday_ar in off_days
 
       if check_out == "-":
         if is_checkout_off:
@@ -741,7 +745,7 @@ def run_daily_report_module():
       st.dataframe(df_final, use_container_width=True)
 
       excel_bytes = create_daily_excel(
-          df_final, target_date, current_weekday_ar
+          df_final, target_date, current_weekday_ar, checkout_date
       )
       st.download_button(
           "📥 Export Daily Excel Report",
