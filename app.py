@@ -310,7 +310,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "text_wrap": True,
         "font_size": 10,
     })
-    
+
     cell_format = workbook.add_format({
         "align": "center",
         "valign": "vcenter",
@@ -319,7 +319,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "font_size": 10,
     })
 
-    # Status-specific formats with Segoe UI Symbol font for old Excel compatibility
+    # Non-bold status formats with Segoe UI Symbol font for old Excel compatibility
     status_fmt_green = workbook.add_format({
         "align": "center",
         "valign": "vcenter",
@@ -328,7 +328,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "font_size": 10,
         "font_name": "Segoe UI Symbol",
         "font_color": "#16A34A",
-        "bold": True,
+        "bold": False,
     })
     status_fmt_red = workbook.add_format({
         "align": "center",
@@ -338,7 +338,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "font_size": 10,
         "font_name": "Segoe UI Symbol",
         "font_color": "#DC2626",
-        "bold": True,
+        "bold": False,
     })
     status_fmt_gray = workbook.add_format({
         "align": "center",
@@ -348,7 +348,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "font_size": 10,
         "font_name": "Segoe UI Symbol",
         "font_color": "#64748B",
-        "bold": True,
+        "bold": False,
     })
     status_fmt_yellow = workbook.add_format({
         "align": "center",
@@ -358,7 +358,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "font_size": 10,
         "font_name": "Segoe UI Symbol",
         "font_color": "#D97706",
-        "bold": True,
+        "bold": False,
     })
     status_fmt_orange = workbook.add_format({
         "align": "center",
@@ -368,15 +368,15 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "font_size": 10,
         "font_name": "Segoe UI Symbol",
         "font_color": "#EA580C",
-        "bold": True,
+        "bold": False,
     })
 
     fmt_base = workbook.add_format({"font_size": 10, "valign": "vcenter"})
     fmt_green_badge = workbook.add_format(
-        {"font_size": 10, "font_color": "#16A34A", "bold": True}
+        {"font_size": 10, "font_color": "#16A34A", "bold": False}
     )
     fmt_gray_badge = workbook.add_format(
-        {"font_size": 10, "font_color": "#64748B", "bold": True}
+        {"font_size": 10, "font_color": "#64748B", "bold": False}
     )
 
     worksheet.merge_range(
@@ -418,7 +418,6 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
       worksheet.write(excel_row, 0, i + 1, cell_format)
       worksheet.write(excel_row, 1, str(row["Name"]), cell_format)
 
-      # Use Segoe UI Symbol font if time cell contains circle indicator
       if "🟡" in checkin_val:
         worksheet.write(excel_row, 2, checkin_val, status_fmt_yellow)
       else:
@@ -429,7 +428,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
       else:
         worksheet.write(excel_row, 3, checkout_val, cell_format)
 
-      # Build Source Badges
+      # Build Source Badges (regular font weight)
       if in_src != "-" and out_src != "-" and in_src != out_src:
         worksheet.write_rich_string(
             excel_row,
@@ -469,7 +468,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
       else:
         worksheet.write(excel_row, 4, "-", cell_format)
 
-      # Dynamic status styling: Absence is rendered in Gray (#64748B)
+      # Non-bold status styling
       if "On Time" in status_str or "🟢" in status_str:
         worksheet.write(excel_row, 5, status_str, status_fmt_green)
       elif "Late" in status_str:
