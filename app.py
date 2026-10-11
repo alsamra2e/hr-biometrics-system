@@ -15,10 +15,6 @@ import streamlit as st
 # 1. GLOBAL UTILITIES & ADVANCED ARABIC NAME NORMALIZATION
 # ============================================================
 
-SHIELD_LOGO_URL = (
-    "https://upload.wikimedia.org/wikipedia/commons/3/38/Generic_Shield_Logo.png"
-)
-
 
 def set_rtl(paragraph):
   p = paragraph._element
@@ -52,15 +48,10 @@ def clean_arabic_name(name):
   for sep in ["/", "\\", "-", "(", ")"]:
     name = name.split(sep)[0]
   base = name.strip()
-  # Remove Arabic tashkeel (diacritics)
   base = re.sub(r"[\u064b-\u0652]", "", base)
-  # Unify Alef and Hamza variants
   base = re.sub(r"[إأآٱؤئءإ]", "ا", base)
-  # Standardize Taa Marbuta and Haa (رقيه / رقية)
   base = base.replace("ة", "ه")
-  # Unify common name spelling variations (ضفير / ظفير)
   base = base.replace("ظ", "ض")
-  # Normalize spacing
   base = " ".join(base.split())
   return base
 
@@ -85,11 +76,7 @@ def create_word_doc(df):
 
   m = htable.rows[0].cells[1].paragraphs[0]
   m.alignment = WD_ALIGN_PARAGRAPH.CENTER
-  try:
-    img_data = BytesIO(requests.get(SHIELD_LOGO_URL, timeout=5).content)
-    m.add_run().add_picture(img_data, width=Inches(0.8))
-  except Exception:
-    m.add_run("ALTURATH")
+  m.add_run("ALTURATH UNIVERSITY")
 
   l = htable.rows[0].cells[2].paragraphs[0]
   l.text = (
@@ -263,7 +250,6 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
     worksheet = workbook.add_worksheet("Attendance")
     writer.sheets["Attendance"] = worksheet
 
-    # Page Setup for A4 Portrait & Print Properties
     worksheet.set_paper(9)  # A4 size
     worksheet.set_portrait()
     worksheet.fit_to_pages(1, 0)
@@ -303,7 +289,6 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "font_size": 10,
     })
 
-    # Rich Text Formats for Colored In/Out Badges
     fmt_base = workbook.add_format({"font_size": 10, "valign": "vcenter"})
     fmt_green = workbook.add_format(
         {"font_size": 10, "font_color": "#16A34A", "bold": True}
@@ -350,7 +335,6 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
       worksheet.write(excel_row, 2, str(row["Check-In"]), cell_format)
       worksheet.write(excel_row, 3, str(row["Check-Out"]), cell_format)
 
-      # Build Styled In/Out Source Badge (e.g. Zaqura (In) + Mhmd Bn Ali (Out))
       if in_src != "-" and out_src != "-" and in_src != out_src:
         worksheet.write_rich_string(
             excel_row,
@@ -438,6 +422,9 @@ def run_daily_report_module():
       "Sunday": "الاحد",
   }
   current_weekday_ar = weekdays_ar.get(target_date.strftime("%A"), "")
+  previous_date = target_date - timedelta(days=1)
+  previous_weekday_ar = weekdays_ar.get(previous_date.strftime("%A"), "")
+
   st.sidebar.info(
       f"Audit Day: **{current_weekday_ar}**\n\nCutoff: **{threshold_str}**"
   )
@@ -484,7 +471,6 @@ def run_daily_report_module():
       df["Date"] = df["dt"].dt.date
       df["Time"] = df["dt"].dt.strftime("%H:%M")
 
-      # Remove 'Gate' word from name
       clean_gate_name = (
           gate_name.replace("Gate", "").replace("gate", "").strip()
       )
@@ -565,7 +551,6 @@ def run_daily_report_module():
       master_names.update(df_off["Name"].dropna().unique())
 
     final_data = []
-    previous_date = target_date - timedelta(days=1)
 
     for clean_name in sorted(master_names):
       display_name = name_display_map.get(clean_name, clean_name)
@@ -596,18 +581,27 @@ def run_daily_report_module():
         check_out = last_out["Time"]
         check_out_source = last_out["Source"]
 
+      # Evaluate Weekly Off status for Check-In day vs. Check-Out day separately
       off_info = df_off[df_off["Name"] == clean_name]
-      is_off = False
+      is_checkin_off = False
+      is_checkout_off = False
+
       if not off_info.empty:
         off_val = str(off_info["OffDay"].iloc[0])
         for sep in [",", "،", "/", "\\", "-"]:
           off_val = off_val.replace(sep, " ")
         off_days = [d.strip() for d in off_val.split() if d.strip()]
-        is_off = current_weekday_ar in off_days
+        is_checkin_off = current_weekday_ar in off_days
+        is_checkout_off = previous_weekday_ar in off_days
 
+      # Handle Check-Out text if day off on previous day
+      if check_out == "-" and is_checkout_off:
+        check_out = "🟡 Day Off"
+
+      # Determine status
       if check_in != "-":
         status = "🔴 Late" if check_in > threshold_str else "🟢 On Time"
-      elif is_off:
+      elif is_checkin_off:
         status = "🟡 Weekly Off"
       elif check_out != "-":
         status = "🟠 Check-Out Only"
@@ -683,15 +677,35 @@ st.markdown(
         padding: 0.8rem 1rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
+    .sidebar-shield {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        margin-bottom: 12px;
+    }
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-# Sidebar Header & Branding
+# Inline SVG Shield Logo for 100% Guaranteed Sidebar Rendering
 st.sidebar.markdown(
-    "### ◈ ALTURATH HR\n**Human Resources & Biometric System**"
+    """
+<div class="sidebar-shield">
+    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 2Z" fill="#2563EB" stroke="#1D4ED8" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M12 6V18M8 10L12 6L16 10" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+        <div style="font-weight: 850; font-size: 1.05rem; color: #0F172A; line-height: 1.2;">ALTURATH HR</div>
+        <div style="font-size: 0.68rem; color: #64748B; font-weight: 600;">Biometric Attendance System</div>
+    </div>
+</div>
+""",
+    unsafe_allow_html=True,
 )
+
 st.sidebar.markdown("---")
 
 app_mode = st.sidebar.selectbox(
