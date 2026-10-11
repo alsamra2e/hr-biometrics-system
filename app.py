@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timedelta
 from io import BytesIO
+import os
 import re
 
 from docx import Document
@@ -14,6 +15,25 @@ import streamlit as st
 # ============================================================
 # 1. GLOBAL UTILITIES & ADVANCED ARABIC NAME NORMALIZATION
 # ============================================================
+
+
+def get_local_logo_path():
+  candidates = ["logo(1).png", "./logo(1).png", "/logo(1).png"]
+  for path in candidates:
+    if os.path.isfile(path):
+      return path
+  return None
+
+
+def get_logo_base64():
+  path = get_local_logo_path()
+  if path:
+    try:
+      with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+    except Exception:
+      pass
+  return None
 
 
 def set_rtl(paragraph):
@@ -35,6 +55,9 @@ def set_table_rtl(table):
 def extract_date_from_filename(filename):
   match = re.search(r"\d{4}-\d{2}-\d{2}", filename)
   return match.group(0) if match else str(date.today())
+
+
+import base64
 
 
 def clean_arabic_name(name):
@@ -74,9 +97,16 @@ def create_word_doc(df):
   r.alignment = WD_ALIGN_PARAGRAPH.RIGHT
   set_rtl(r)
 
-  m = htable.rows[0].cells[1].paragraphs[0]
-  m.alignment = WD_ALIGN_PARAGRAPH.CENTER
-  m.add_run("ALTURATH UNIVERSITY")
+  logo_cell = htable.rows[0].cells[1].paragraphs[0]
+  logo_cell.alignment = WD_ALIGN_PARAGRAPH.CENTER
+  logo_path = get_local_logo_path()
+  if logo_path:
+    try:
+      logo_cell.add_run().add_picture(logo_path, width=Inches(0.8))
+    except Exception:
+      logo_cell.add_run("ALTURATH")
+  else:
+    logo_cell.add_run("ALTURATH")
 
   l = htable.rows[0].cells[2].paragraphs[0]
   l.text = (
@@ -581,7 +611,7 @@ def run_daily_report_module():
         check_out = last_out["Time"]
         check_out_source = last_out["Source"]
 
-      # Evaluate Weekly Off status for Check-In day vs. Check-Out day separately
+      # Evaluate Weekly Off status for Check-In vs Check-Out separately
       off_info = df_off[df_off["Name"] == clean_name]
       is_checkin_off = False
       is_checkout_off = False
@@ -594,17 +624,17 @@ def run_daily_report_module():
         is_checkin_off = current_weekday_ar in off_days
         is_checkout_off = previous_weekday_ar in off_days
 
-      # Handle Check-Out text if day off on previous day
-      if check_out == "-" and is_checkout_off:
-        check_out = "🟡 Day Off"
+      # Handle Check-Out text
+      if check_out == "-":
+        if is_checkout_off:
+          check_out = "🟡 Day Off"
 
-      # Determine status
-      if check_in != "-":
-        status = "🔴 Late" if check_in > threshold_str else "🟢 On Time"
-      elif is_checkin_off:
+      # Handle Check-In and Status logic
+      if is_checkin_off:
+        check_in = "🟡 Day Off"
         status = "🟡 Weekly Off"
-      elif check_out != "-":
-        status = "🟠 Check-Out Only"
+      elif check_in != "-":
+        status = "🔴 Late" if check_in > threshold_str else "🟢 On Time"
       else:
         status = "🔴 Absence"
 
@@ -677,34 +707,46 @@ st.markdown(
         padding: 0.8rem 1rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    .sidebar-shield {
+    .sidebar-brand {
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 8px 0;
-        margin-bottom: 12px;
+        padding: 6px 0;
+        margin-bottom: 10px;
+    }
+    .sidebar-logo {
+        width: 46px;
+        height: 46px;
+        object-fit: contain;
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-# Inline SVG Shield Logo for 100% Guaranteed Sidebar Rendering
-st.sidebar.markdown(
-    """
-<div class="sidebar-shield">
-    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 2Z" fill="#2563EB" stroke="#1D4ED8" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M12 6V18M8 10L12 6L16 10" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <div>
-        <div style="font-weight: 850; font-size: 1.05rem; color: #0F172A; line-height: 1.2;">ALTURATH HR</div>
-        <div style="font-size: 0.68rem; color: #64748B; font-weight: 600;">Biometric Attendance System</div>
+# Sidebar Header & Local Logo Integration
+logo_b64 = get_logo_base64()
+if logo_b64:
+  st.sidebar.markdown(
+      f"""
+    <div class="sidebar-brand">
+        <img class="sidebar-logo" src="data:image/png;base64,{logo_b64}">
+        <div>
+            <div style="font-weight: 850; font-size: 1rem; color: #0F172A; line-height: 1.2;">ALTURATH HR</div>
+            <div style="font-size: 0.65rem; color: #64748B; font-weight: 600;">Biometric System</div>
+        </div>
     </div>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+    """,
+      unsafe_allow_html=True,
+  )
+else:
+  st.sidebar.markdown(
+      "### ◈ ALTURATH HR\n**Human Resources & Biometric System**"
+  )
 
 st.sidebar.markdown("---")
 
