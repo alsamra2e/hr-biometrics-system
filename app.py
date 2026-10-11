@@ -278,7 +278,8 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
     worksheet = workbook.add_worksheet("Attendance")
     writer.sheets["Attendance"] = worksheet
 
-    worksheet.set_paper(9)  # A4 size
+    # A4 Portrait Print Properties
+    worksheet.set_paper(9)
     worksheet.set_portrait()
     worksheet.fit_to_pages(1, 0)
     worksheet.set_footer("&CPage &P of &N")
@@ -309,6 +310,8 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "text_wrap": True,
         "font_size": 10,
     })
+    
+    # Base cell formatting
     cell_format = workbook.add_format({
         "align": "center",
         "valign": "vcenter",
@@ -317,11 +320,53 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "font_size": 10,
     })
 
+    # Status-specific formats with Segoe UI Symbol font for old Excel compatibility
+    status_fmt_green = workbook.add_format({
+        "align": "center",
+        "valign": "vcenter",
+        "border": 1,
+        "border_color": "#E2E8F0",
+        "font_size": 10,
+        "font_name": "Segoe UI Symbol",
+        "font_color": "#16A34A",
+        "bold": True,
+    })
+    status_fmt_red = workbook.add_format({
+        "align": "center",
+        "valign": "vcenter",
+        "border": 1,
+        "border_color": "#E2E8F0",
+        "font_size": 10,
+        "font_name": "Segoe UI Symbol",
+        "font_color": "#DC2626",
+        "bold": True,
+    })
+    status_fmt_yellow = workbook.add_format({
+        "align": "center",
+        "valign": "vcenter",
+        "border": 1,
+        "border_color": "#E2E8F0",
+        "font_size": 10,
+        "font_name": "Segoe UI Symbol",
+        "font_color": "#D97706",
+        "bold": True,
+    })
+    status_fmt_orange = workbook.add_format({
+        "align": "center",
+        "valign": "vcenter",
+        "border": 1,
+        "border_color": "#E2E8F0",
+        "font_size": 10,
+        "font_name": "Segoe UI Symbol",
+        "font_color": "#EA580C",
+        "bold": True,
+    })
+
     fmt_base = workbook.add_format({"font_size": 10, "valign": "vcenter"})
-    fmt_green = workbook.add_format(
+    fmt_green_badge = workbook.add_format(
         {"font_size": 10, "font_color": "#16A34A", "bold": True}
     )
-    fmt_gray = workbook.add_format(
+    fmt_gray_badge = workbook.add_format(
         {"font_size": 10, "font_color": "#64748B", "bold": True}
     )
 
@@ -357,25 +402,38 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
       excel_row = i + 3
       in_src = str(row["In_Source"])
       out_src = str(row["Out_Source"])
+      checkin_val = str(row["Check-In"])
+      checkout_val = str(row["Check-Out"])
+      status_str = str(row["Status"])
 
       worksheet.write(excel_row, 0, i + 1, cell_format)
       worksheet.write(excel_row, 1, str(row["Name"]), cell_format)
-      worksheet.write(excel_row, 2, str(row["Check-In"]), cell_format)
-      worksheet.write(excel_row, 3, str(row["Check-Out"]), cell_format)
 
+      # Use Segoe UI Symbol font if time cell contains circle indicator
+      if "🟡" in checkin_val:
+        worksheet.write(excel_row, 2, checkin_val, status_fmt_yellow)
+      else:
+        worksheet.write(excel_row, 2, checkin_val, cell_format)
+
+      if "🟡" in checkout_val:
+        worksheet.write(excel_row, 3, checkout_val, status_fmt_yellow)
+      else:
+        worksheet.write(excel_row, 3, checkout_val, cell_format)
+
+      # Build Source Badges
       if in_src != "-" and out_src != "-" and in_src != out_src:
         worksheet.write_rich_string(
             excel_row,
             4,
             fmt_base,
             f"{in_src} ",
-            fmt_green,
+            fmt_green_badge,
             "(In)",
             fmt_base,
             " + ",
             fmt_base,
             f"{out_src} ",
-            fmt_gray,
+            fmt_gray_badge,
             "(Out)",
             cell_format,
         )
@@ -385,7 +443,7 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
             4,
             fmt_base,
             f"{in_src} ",
-            fmt_green,
+            fmt_green_badge,
             "(In)",
             cell_format,
         )
@@ -395,14 +453,24 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
             4,
             fmt_base,
             f"{out_src} ",
-            fmt_gray,
+            fmt_gray_badge,
             "(Out)",
             cell_format,
         )
       else:
         worksheet.write(excel_row, 4, "-", cell_format)
 
-      worksheet.write(excel_row, 5, str(row["Status"]), cell_format)
+      # Apply Segoe UI Symbol font & color dynamically based on status state
+      if "On Time" in status_str or "🟢" in status_str:
+        worksheet.write(excel_row, 5, status_str, status_fmt_green)
+      elif "Late" in status_str or "Absence" in status_str or "🔴" in status_str:
+        worksheet.write(excel_row, 5, status_str, status_fmt_red)
+      elif "Weekly Off" in status_str or "🟡" in status_str:
+        worksheet.write(excel_row, 5, status_str, status_fmt_yellow)
+      elif "Check-Out Only" in status_str or "🟠" in status_str:
+        worksheet.write(excel_row, 5, status_str, status_fmt_orange)
+      else:
+        worksheet.write(excel_row, 5, status_str, cell_format)
 
     worksheet.set_column("A:A", 6)
     worksheet.set_column("B:B", 32)
@@ -738,7 +806,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Prominent Sidebar Logo Header Block
 logo_b64 = get_logo_base64()
 if logo_b64:
   st.sidebar.markdown(
