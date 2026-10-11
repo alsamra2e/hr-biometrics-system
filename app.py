@@ -311,7 +311,6 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "font_size": 10,
     })
     
-    # Base cell formatting
     cell_format = workbook.add_format({
         "align": "center",
         "valign": "vcenter",
@@ -339,6 +338,16 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
         "font_size": 10,
         "font_name": "Segoe UI Symbol",
         "font_color": "#DC2626",
+        "bold": True,
+    })
+    status_fmt_gray = workbook.add_format({
+        "align": "center",
+        "valign": "vcenter",
+        "border": 1,
+        "border_color": "#E2E8F0",
+        "font_size": 10,
+        "font_name": "Segoe UI Symbol",
+        "font_color": "#64748B",
         "bold": True,
     })
     status_fmt_yellow = workbook.add_format({
@@ -460,11 +469,13 @@ def create_daily_excel(df_final, target_date, current_weekday_ar):
       else:
         worksheet.write(excel_row, 4, "-", cell_format)
 
-      # Apply Segoe UI Symbol font & color dynamically based on status state
+      # Dynamic status styling: Absence is rendered in Gray (#64748B)
       if "On Time" in status_str or "🟢" in status_str:
         worksheet.write(excel_row, 5, status_str, status_fmt_green)
-      elif "Late" in status_str or "Absence" in status_str or "🔴" in status_str:
+      elif "Late" in status_str:
         worksheet.write(excel_row, 5, status_str, status_fmt_red)
+      elif "Absence" in status_str:
+        worksheet.write(excel_row, 5, status_str, status_fmt_gray)
       elif "Weekly Off" in status_str or "🟡" in status_str:
         worksheet.write(excel_row, 5, status_str, status_fmt_yellow)
       elif "Check-Out Only" in status_str or "🟠" in status_str:
