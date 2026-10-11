@@ -2,6 +2,7 @@ from datetime import date, datetime, time, timedelta
 from io import BytesIO
 import os
 import re
+import base64
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -57,9 +58,6 @@ def extract_date_from_filename(filename):
   return match.group(0) if match else str(date.today())
 
 
-import base64
-
-
 def clean_arabic_name(name):
   """Normalizes Arabic names by removing department tags, diacritics,
 
@@ -102,7 +100,7 @@ def create_word_doc(df):
   logo_path = get_local_logo_path()
   if logo_path:
     try:
-      logo_cell.add_run().add_picture(logo_path, width=Inches(0.8))
+      logo_cell.add_run().add_picture(logo_path, width=Inches(0.95))
     except Exception:
       logo_cell.add_run("ALTURATH")
   else:
@@ -611,7 +609,6 @@ def run_daily_report_module():
         check_out = last_out["Time"]
         check_out_source = last_out["Source"]
 
-      # Evaluate Weekly Off status for Check-In vs Check-Out separately
       off_info = df_off[df_off["Name"] == clean_name]
       is_checkin_off = False
       is_checkout_off = False
@@ -624,12 +621,10 @@ def run_daily_report_module():
         is_checkin_off = current_weekday_ar in off_days
         is_checkout_off = previous_weekday_ar in off_days
 
-      # Handle Check-Out text
       if check_out == "-":
         if is_checkout_off:
           check_out = "🟡 Day Off"
 
-      # Handle Check-In and Status logic
       if is_checkin_off:
         check_in = "🟡 Day Off"
         status = "🟡 Weekly Off"
@@ -707,45 +702,58 @@ st.markdown(
         padding: 0.8rem 1rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    .sidebar-brand {
+    .sidebar-logo-container {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 12px;
-        padding: 6px 0;
-        margin-bottom: 10px;
+        text-align: center;
+        padding: 12px 0 6px 0;
+        margin-bottom: 8px;
     }
-    .sidebar-logo {
-        width: 46px;
-        height: 46px;
+    .sidebar-logo-img {
+        width: 110px;
+        height: 110px;
         object-fit: contain;
         background: #ffffff;
-        border-radius: 10px;
-        padding: 4px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 16px;
+        padding: 8px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+        margin-bottom: 12px;
+    }
+    .sidebar-title-text {
+        font-weight: 850;
+        font-size: 1.15rem;
+        color: #0F172A;
+        line-height: 1.25;
+        letter-spacing: -0.3px;
+    }
+    .sidebar-subtitle-text {
+        font-size: 0.72rem;
+        color: #64748B;
+        font-weight: 600;
+        margin-top: 2px;
     }
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-# Sidebar Header & Local Logo Integration
+# Prominent Sidebar Logo Header Block
 logo_b64 = get_logo_base64()
 if logo_b64:
   st.sidebar.markdown(
       f"""
-    <div class="sidebar-brand">
-        <img class="sidebar-logo" src="data:image/png;base64,{logo_b64}">
-        <div>
-            <div style="font-weight: 850; font-size: 1rem; color: #0F172A; line-height: 1.2;">ALTURATH HR</div>
-            <div style="font-size: 0.65rem; color: #64748B; font-weight: 600;">Biometric System</div>
-        </div>
+    <div class="sidebar-logo-container">
+        <img class="sidebar-logo-img" src="data:image/png;base64,{logo_b64}">
+        <div class="sidebar-title-text">ALTURATH UNIVERSITY</div>
+        <div class="sidebar-subtitle-text">Human Resources & Biometric System</div>
     </div>
     """,
       unsafe_allow_html=True,
   )
 else:
   st.sidebar.markdown(
-      "### ◈ ALTURATH HR\n**Human Resources & Biometric System**"
+      "### ◈ ALTURATH UNIVERSITY\n**Human Resources & Biometric System**"
   )
 
 st.sidebar.markdown("---")
